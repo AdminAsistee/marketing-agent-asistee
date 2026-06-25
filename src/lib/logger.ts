@@ -2,7 +2,7 @@ import { supabase } from './supabase';
 import { AgentLog } from './types';
 
 export const logger = {
-  info: (message: string, meta?: Record<string, any>) => {
+  info: (message: string, meta?: Record<string, unknown>) => {
     const timestamp = new Date().toISOString();
     console.log(
       `[\x1b[36m${timestamp}\x1b[0m] [\x1b[32mINFO\x1b[0m] ${message}`,
@@ -10,7 +10,7 @@ export const logger = {
     );
   },
 
-  error: (message: string, error?: any) => {
+  error: (message: string, error?: unknown) => {
     const timestamp = new Date().toISOString();
     console.error(
       `[\x1b[36m${timestamp}\x1b[0m] [\x1b[31mERROR\x1b[0m] ${message}`,
@@ -50,7 +50,7 @@ export const logger = {
       }
 
       return data as AgentLog;
-    } catch (err: any) {
+    } catch (err) {
       console.error(
         `[\x1b[36m${timestamp}\x1b[0m] [\x1b[31mERROR\x1b[0m] Exception saving telemetry to Supabase:`,
         err

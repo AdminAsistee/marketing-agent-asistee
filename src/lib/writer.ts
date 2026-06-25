@@ -32,14 +32,24 @@ const writerResponseSchema = {
 export async function writerAgent(
   prd: string,
   research: ResearchResult,
-  runId: string
+  runId: string,
+  previousDraft?: WriterDraft,
+  feedback?: string,
+  agentName: AgentName = 'writer',
+  retryMetadata?: {
+    attempt: number;
+    max_attempts: number;
+    is_revision: boolean;
+  }
 ): Promise<WriterDraft> {
-  const agentName: AgentName = 'writer';
   const startTime = Date.now();
   const inputPayload = {
     prd,
     researchSummary: research.summary,
     researchSources: research.sources,
+    previousDraft,
+    feedback,
+    retry_metadata: retryMetadata,
   };
 
   // Validate inputs
@@ -51,7 +61,7 @@ export async function writerAgent(
   }
 
   try {
-    const systemInstruction = `You are an expert marketing writer and content strategist. Your task is to write a comprehensive, professional first-draft blog post or article based on the provided Product Requirement Document (PRD) and web research findings.
+    let systemInstruction = `You are an expert marketing writer and content strategist. Your task is to write a comprehensive, professional first-draft blog post or article based on the provided Product Requirement Document (PRD) and web research findings.
 
 Follow these strict guidelines:
 1. Ground all your content in the provided PRD and research findings.
@@ -60,11 +70,23 @@ Follow these strict guidelines:
 4. Keep the style professional, clean, and optimized for marketing and technical reading.
 5. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
 
-    const contents = `PRD details:\n${prd}\n\nWeb Research findings:\n${research.summary}\n\nSources cited:\n${JSON.stringify(
+    let contents = `PRD details:\n${prd}\n\nWeb Research findings:\n${research.summary}\n\nSources cited:\n${JSON.stringify(
       research.sources,
       null,
       2
     )}`;
+
+    if (previousDraft && feedback) {
+      systemInstruction += `\n\nAdditionally, you are in REVISION MODE. You must revise the previous draft based on feedback from a Fact Checker.
+Follow these revision guidelines:
+1. Carefully address and fix all unsupported claims listed in the Fact Checker feedback.
+2. Preserve accurate sections and content from the previous draft that did not have issues.
+3. Do NOT introduce new unsupported information.
+4. Maintain the exact same output schema.`;
+
+      contents += `\n\n--- PREVIOUS DRAFT TO REVISE ---\n${JSON.stringify(previousDraft, null, 2)}` +
+                  `\n\n--- FACT CHECKER FEEDBACK ---\n${feedback}`;
+    }
 
     const response = await ai.models.generateContent({
       model: AGENT_MODELS.writer,
@@ -97,8 +119,8 @@ Follow these strict guidelines:
       throw new Error('Writer Agent response JSON is missing required keys.');
     }
 
-    const respObj = response as { usageMetadata?: { candidatesTokenCount?: number } };
-    const tokenCount = respObj.usageMetadata?.candidatesTokenCount || undefined;
+    // Extract total token count from the SDK response
+    const tokenCount = response.usageMetadata?.totalTokenCount || undefined;
 
     // Log successful transaction
     await logger.logAgentTransaction({

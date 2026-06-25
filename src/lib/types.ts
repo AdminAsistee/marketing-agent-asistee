@@ -3,14 +3,17 @@ export type AgentName =
   | 'writer'
   | 'fact-checker'
   | 'style-polisher'
-  | 'rubric-grader';
+  | 'rubric-grader'
+  | `writer_agent_attempt_${number}`
+  | `writer_agent_revision_${number}`
+  | `fact_checker_attempt_${number}`;
 
 export interface AgentLog {
   id?: string;
   run_id: string;
   agent_name: AgentName;
-  input: Record<string, any>;
-  output: Record<string, any>;
+  input: unknown;
+  output: unknown;
   latency_ms: number;
   token_count?: number;
   timestamp?: string;
@@ -61,8 +64,10 @@ export interface WriterInput {
 export type WriterOutput = WriterDraft;
 
 export interface FactCheckerInput {
-  draft: string;
-  sources: ResearchSource[];
+  prd: string;
+  researchSummary: string;
+  researchSources: ResearchSource[];
+  draft: WriterDraft;
 }
 
 export interface FactCheckerOutput {
@@ -80,12 +85,15 @@ export interface StylePolisherOutput {
 }
 
 export interface RubricGraderInput {
-  draft: WriterDraft;
   prd: string;
+  article: WriterDraft;
+  factCheckResult: FactCheckerOutput;
 }
 
 export interface RubricGraderOutput {
   clarity: number;      // 1-5 score
   accuracy: number;     // 1-5 score
   completeness: number; // 1-5 score
+  overall_score: number; // 1-5 score
+  feedback: string;
 }
