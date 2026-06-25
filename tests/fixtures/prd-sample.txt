@@ -1,0 +1,20 @@
+# Product Requirement Document (PRD): TaskFlow AI
+
+## 1. Overview
+TaskFlow AI is a modern task and project management application targeted at remote teams and developer workflows. The core differentiator is its deep integration of contextual artificial intelligence to automate task decomposition, smart scheduling, and auto-generation of status updates.
+
+## 2. Target Audience
+- Software Engineering Teams
+- Project Managers (Agile/Scrum)
+- Remote & Hybrid tech startups
+
+## 3. Key Features
+- **AI Task Breakdown**: Users can type a high-level goal (e.g., "Set up Auth0 authentication flow"), and TaskFlow AI automatically generates sub-tasks, estimating hours and complexity.
+- **Smart Scheduling**: Integration with Google Calendar and Outlook to automatically schedule focus time blocks for pending developer tasks.
+- **Context-Aware Notifications**: Slack and email updates generated using LLMs that summarize what was achieved during the sprint.
+
+## 4. Technical Constraints
+- Built using Next.js 15+ (App Router)
+- Supabase for PostgreSQL database, authentication, and real-time subscription
+- Gemini API (`gemini-2.5-flash` or newer) for AI features
+- Tailwind CSS for modern responsive styling

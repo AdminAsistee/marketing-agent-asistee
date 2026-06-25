@@ -16,6 +16,11 @@ export interface AgentLog {
   timestamp?: string;
 }
 
+export interface ResearchResult {
+  summary: string;
+  sources: ResearchSource[];
+}
+
 // -------------------------------------------------------------
 // Agent Specific Input/Output Types
 // -------------------------------------------------------------
@@ -42,7 +47,7 @@ export interface Section {
 export interface WriterDraft {
   title: string;
   introduction: string;
-  bodySections: Section[];
+  sections: Section[];
   conclusion: string;
 }
 
