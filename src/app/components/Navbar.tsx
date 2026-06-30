@@ -37,6 +37,7 @@ export default function Navbar() {
           fontWeight: 800,
           background: 'linear-gradient(135deg, #a5b4fc, #6366f1)',
           WebkitBackgroundClip: 'text',
+          backgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
           Antigravity Content Suite
