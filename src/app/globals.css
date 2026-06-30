@@ -491,3 +491,255 @@ a {
   border: 1px solid rgba(245, 158, 11, 0.2);
   color: var(--warning);
 }
+
+/* -------------------------------------------------------------
+ * Tabbed & Alternative Views (Task 2)
+ * ------------------------------------------------------------- */
+.view-toggle-container {
+  display: inline-flex;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 30px;
+}
+
+.view-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--gray-muted);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn:hover {
+  color: var(--foreground);
+}
+
+.view-toggle-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.tabs-layout {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .tabs-layout {
+    flex-direction: column;
+  }
+}
+
+.tabs-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 250px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .tabs-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--card-border);
+  }
+}
+
+.tab-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--gray-muted);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--foreground);
+}
+
+.tab-btn.active {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.tab-panel {
+  flex-grow: 1;
+  width: 100%;
+}
+
+.final-product-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+}
+
+@media (min-width: 900px) {
+  .final-product-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+  }
+}
+
+.final-article-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 30px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+}
+
+.final-evaluation-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 30px;
+  height: fit-content;
+  position: sticky;
+  top: 30px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+}
+
+/* -------------------------------------------------------------
+ * PDF & Print Styles
+ * ------------------------------------------------------------- */
+@media print {
+  /* Set document-level colors */
+  :root {
+    --background: #ffffff !important;
+    --foreground: #000000 !important;
+    --primary: #000000 !important;
+    --gray-muted: #555555 !important;
+    --card-bg: #ffffff !important;
+    --card-border: transparent !important;
+  }
+  
+  /* Reset height/overflow restrictions which clip multi-page printing */
+  html, body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    position: static !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    line-height: 1.6;
+    font-family: Georgia, serif !important;
+  }
+  
+  /* Hide UI elements that are not part of the final article */
+  .back-btn,
+  .view-toggle-container,
+  .flow-status-banner,
+  .tabs-sidebar,
+  .final-evaluation-card,
+  .header,
+  .export-actions,
+  button,
+  .view-toggle-btn,
+  .raw-json,
+  details {
+    display: none !important;
+  }
+  
+  /* Remove layout structures and make final article full page width */
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .tabs-layout {
+    display: block !important;
+  }
+  
+  .tab-panel {
+    width: 100% !important;
+  }
+  
+  .final-product-grid {
+    display: block !important;
+  }
+  
+  .final-article-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    color: black !important;
+  }
+
+  /* Force plain black text on all inner tags to avoid light-gray text */
+  .final-article-card * {
+    color: black !important;
+    background: transparent !important;
+  }
+  
+  .article-title {
+    font-size: 20pt !important;
+    font-weight: bold !important;
+    margin-top: 0 !important;
+    margin-bottom: 24px !important;
+    text-align: center !important;
+  }
+
+  .article-intro {
+    font-size: 12pt !important;
+    font-style: italic !important;
+    margin-bottom: 24px !important;
+    color: #444 !important;
+  }
+
+  .article-section-heading {
+    font-size: 14pt !important;
+    font-weight: bold !important;
+    margin-top: 24px !important;
+    margin-bottom: 8px !important;
+    border-bottom: 1px solid #ddd !important;
+    padding-bottom: 4px !important;
+  }
+
+  .article-section-content {
+    font-size: 11pt !important;
+    margin-bottom: 16px !important;
+  }
+
+  .article-conclusion {
+    font-size: 11pt !important;
+    font-weight: bold !important;
+    margin-top: 24px !important;
+  }
+
+  .section-box {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 0 24px 0 !important;
+    page-break-inside: avoid;
+  }
+}
+
