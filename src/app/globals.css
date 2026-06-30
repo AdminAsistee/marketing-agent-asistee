@@ -659,7 +659,9 @@ a {
   button,
   .view-toggle-btn,
   .raw-json,
-  details {
+  details,
+  nav,
+  .navbar {
     display: none !important;
   }
   

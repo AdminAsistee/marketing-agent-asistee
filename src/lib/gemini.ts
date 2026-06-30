@@ -17,6 +17,7 @@ export const AGENT_MODELS = {
   'style-polisher': 'gemini-3.5-flash',
   'rubric-grader': 'gemini-3.1-pro-preview',
   'seo-agent': 'gemini-3.5-flash',
+  'seo-optimizer-agent': 'gemini-3.5-flash',
 } as const;
 
 export type AgentModelName = typeof AGENT_MODELS[keyof typeof AGENT_MODELS];

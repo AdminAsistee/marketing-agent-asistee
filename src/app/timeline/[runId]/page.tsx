@@ -209,10 +209,6 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
 
   return (
     <div className="container">
-      <Link href="/generate" className="back-btn">
-        ← Generate another article
-      </Link>
-
       <div className="header" style={{ textAlign: 'left' }}>
         <h1 className="title-gradient" style={{ fontSize: '2.2rem' }}>Pipeline Generation Lifecycle</h1>
         <p className="subtitle" style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>

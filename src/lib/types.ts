@@ -5,6 +5,7 @@ export type AgentName =
   | 'style-polisher'
   | 'rubric-grader'
   | 'seo_agent'
+  | 'seo_optimizer_agent'
   | `writer_agent_attempt_${number}`
   | `writer_agent_revision_${number}`
   | `fact_checker_attempt_${number}`;
@@ -118,4 +119,16 @@ export interface SeoInput {
   keyword: string;
   websiteContext?: string;
   trendData: TrendData;
+}
+
+export interface SeoOptimizationReport {
+  title_analysis: string;
+  seo_score: string;
+  search_intent_match: string;
+  missing_keywords: string[];
+  content_gaps: string[];
+  recommended_headings: string[];
+  readability_feedback: string;
+  improvement_suggestions: string[];
+  optimized_title_options: string[];
 }

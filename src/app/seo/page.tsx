@@ -78,11 +78,8 @@ export default function SeoPage() {
 
   return (
     <div className="container">
-      <div className="header" style={{ textAlign: 'left' }}>
-        <Link href="/generate" className="back-btn">
-          ← Back to Blog Generator
-        </Link>
-        <h1 className="title-gradient" style={{ fontSize: '2.5rem', marginTop: '10px' }}>SEO Keyword Intelligence</h1>
+      <div className="header">
+        <h1 className="title-gradient">SEO Keyword Intelligence</h1>
         <p className="subtitle">Identify high-value keywords, rising queries, and optimized blog content ideas using search trends.</p>
       </div>
 

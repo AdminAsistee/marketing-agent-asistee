@@ -103,14 +103,9 @@ ${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\
 
   return (
     <div className="container">
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '40px' }}>
-        <div>
-          <h1 className="title-gradient" style={{ margin: 0 }}>AI Marketing Content Agent</h1>
-          <p className="subtitle">Transform your Product Requirements (PRD) into high-quality, fact-checked blog articles.</p>
-        </div>
-        <Link href="/seo" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', boxShadow: 'none' }}>
-          🔍 SEO Intelligence
-        </Link>
+      <div className="header">
+        <h1 className="title-gradient">AI Marketing Content Agent</h1>
+        <p className="subtitle">Transform your Product Requirements (PRD) into high-quality, fact-checked blog articles.</p>
       </div>
 
       {loading ? (
