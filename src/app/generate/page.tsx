@@ -1,13 +1,64 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface SeoRecommendations {
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  contentIdeas: string[];
+  recommendedTitles: string[];
+  seoStrategy: string;
+}
 
 export default function GeneratePage() {
   const [prd, setPrd] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [seoRecs, setSeoRecs] = useState<{ keyword: string; recommendations: SeoRecommendations } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const stored = localStorage.getItem('seo_recommendations');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setSeoRecs(parsed);
+        
+        // Prefill PRD if currently empty
+        setPrd((prev) => {
+          if (prev.trim() === '') {
+            const firstTitle = parsed.recommendations.recommendedTitles?.[0] || 'Optimized Blog Article';
+            return `# Product Requirement Document (PRD) / Content Spec
+
+## 1. Title Goal
+${firstTitle}
+
+## 2. Core Focus
+Create a comprehensive and useful marketing blog article targeting the keyword "${parsed.recommendations.primaryKeyword}".
+
+## 3. SEO Instructions
+- Primary Keyword: ${parsed.recommendations.primaryKeyword}
+- Secondary Keywords: ${parsed.recommendations.secondaryKeywords.join(', ')}
+- Content Strategy Focus: ${parsed.recommendations.seoStrategy}
+
+## 4. Key Elements to Discuss
+${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\n')}
+`;
+          }
+          return prev;
+        });
+      } catch (e) {
+        console.error('Failed to parse SEO recommendations from localStorage:', e);
+      }
+    }
+  }, []);
+
+  const handleClearSeo = () => {
+    localStorage.removeItem('seo_recommendations');
+    setSeoRecs(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +76,10 @@ export default function GeneratePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prd }),
+        body: JSON.stringify({ 
+          prd, 
+          seoRecommendations: seoRecs?.recommendations 
+        }),
       });
 
       if (!response.ok) {
@@ -49,9 +103,14 @@ export default function GeneratePage() {
 
   return (
     <div className="container">
-      <div className="header">
-        <h1 className="title-gradient">AI Marketing Content Agent</h1>
-        <p className="subtitle">Transform your Product Requirements (PRD) into high-quality, fact-checked blog articles.</p>
+      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '40px' }}>
+        <div>
+          <h1 className="title-gradient" style={{ margin: 0 }}>AI Marketing Content Agent</h1>
+          <p className="subtitle">Transform your Product Requirements (PRD) into high-quality, fact-checked blog articles.</p>
+        </div>
+        <Link href="/seo" className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', boxShadow: 'none' }}>
+          🔍 SEO Intelligence
+        </Link>
       </div>
 
       {loading ? (
@@ -65,6 +124,39 @@ export default function GeneratePage() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="card">
+          {seoRecs && (
+            <div style={{
+              background: 'var(--success-bg)',
+              color: 'var(--success)',
+              border: '1px solid rgba(16, 185, 129, 0.2)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.9rem'
+            }}>
+              <span>
+                📈 <strong>SEO Keywords Loaded:</strong> Targeted for keyword "<strong>{seoRecs.recommendations.primaryKeyword}</strong>" (Topic: {seoRecs.keyword}).
+              </span>
+              <button 
+                type="button"
+                onClick={handleClearSeo}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--error)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
+                }}
+              >
+                Clear SEO
+              </button>
+            </div>
+          )}
+
           {error && (
             <div style={{
               background: 'var(--error-bg)',

@@ -4,6 +4,7 @@ export type AgentName =
   | 'fact-checker'
   | 'style-polisher'
   | 'rubric-grader'
+  | 'seo_agent'
   | `writer_agent_attempt_${number}`
   | `writer_agent_revision_${number}`
   | `fact_checker_attempt_${number}`;
@@ -96,4 +97,25 @@ export interface RubricGraderOutput {
   completeness: number; // 1-5 score
   overall_score: number; // 1-5 score
   feedback: string;
+}
+
+export interface TrendData {
+  keyword: string;
+  relatedQueries: string[];
+  risingQueries: string[];
+  trendSummary: string;
+}
+
+export interface SeoRecommendations {
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  contentIdeas: string[];
+  recommendedTitles: string[];
+  seoStrategy: string;
+}
+
+export interface SeoInput {
+  keyword: string;
+  websiteContext?: string;
+  trendData: TrendData;
 }

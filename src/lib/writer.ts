@@ -1,6 +1,6 @@
 import { ai, AGENT_MODELS } from './gemini';
 import { logger } from './logger';
-import type { WriterDraft, ResearchResult, AgentName } from './types';
+import type { WriterDraft, ResearchResult, AgentName, SeoRecommendations } from './types';
 
 // Enforce the exact JSON schema requested by the user and defined in types.ts
 const writerResponseSchema = {
@@ -40,7 +40,8 @@ export async function writerAgent(
     attempt: number;
     max_attempts: number;
     is_revision: boolean;
-  }
+  },
+  seoRecommendations?: SeoRecommendations
 ): Promise<WriterDraft> {
   const startTime = Date.now();
   const inputPayload = {
@@ -50,6 +51,7 @@ export async function writerAgent(
     previousDraft,
     feedback,
     retry_metadata: retryMetadata,
+    seo_recommendations: seoRecommendations,
   };
 
   // Validate inputs
@@ -75,6 +77,21 @@ Follow these strict guidelines:
       null,
       2
     )}`;
+
+    if (seoRecommendations) {
+      systemInstruction += `\n\nAdditionally, you must optimize the article for search visibility using these SEO recommendations:
+- Primary Keyword: "${seoRecommendations.primaryKeyword}" (incorporate naturally throughout the article, especially in headings).
+- Secondary Keywords: ${JSON.stringify(seoRecommendations.secondaryKeywords)} (incorporate where relevant).
+- Recommended Titles: ${JSON.stringify(seoRecommendations.recommendedTitles)} (choose one of these or write a highly similar optimized title).
+- SEO Strategy Guidelines: ${seoRecommendations.seoStrategy}
+
+Follow these strict SEO writing rules:
+1. Use the keywords naturally; do NOT stuff keywords.
+2. Prioritize high-quality, useful content over search engine manipulation.
+3. Structure the content cleanly (with headings and subheadings) to maximize search visibility.`;
+
+      contents += `\n\nSEO Recommendations:\n${JSON.stringify(seoRecommendations, null, 2)}`;
+    }
 
     if (previousDraft && feedback) {
       systemInstruction += `\n\nAdditionally, you are in REVISION MODE. You must revise the previous draft based on feedback from a Fact Checker.

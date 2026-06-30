@@ -10,7 +10,7 @@ import type { FactCheckerOutput, WriterDraft } from '@/lib/types';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { prd } = body;
+    const { prd, seoRecommendations } = body;
 
     // Robust validation: Check for empty or malformed inputs
     if (!prd || typeof prd !== 'string') {
@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
       undefined,
       undefined,
       'writer_agent_attempt_1',
-      { attempt: 1, max_attempts: 3, is_revision: false }
+      { attempt: 1, max_attempts: 3, is_revision: false },
+      seoRecommendations
     );
 
     // Step 3: Run Initial Fact Checker Attempt
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
         currentDraft,
         factCheckResult.feedback,
         `writer_agent_revision_${retryCount}`,
-        { attempt: retryCount + 1, max_attempts: 3, is_revision: true }
+        { attempt: retryCount + 1, max_attempts: 3, is_revision: true },
+        seoRecommendations
       );
 
       // Run Fact Checker Agent on the revised draft
