@@ -707,6 +707,42 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                               </div>
                             )}
 
+                            {/* Writing Style Preferences Metadata */}
+                            {(() => {
+                              const writingConfig = inputPayload?.writingConfiguration as any;
+                              if (!writingConfig) return null;
+                              return (
+                                <div style={{
+                                  background: 'rgba(255, 255, 255, 0.02)',
+                                  border: '1px solid var(--card-border)',
+                                  borderRadius: '8px',
+                                  padding: '10px 14px',
+                                  marginBottom: '16px',
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: '14px',
+                                  fontSize: '0.85rem'
+                                }} className="writing-preferences-metadata">
+                                  <div>
+                                    <span style={{ color: 'var(--gray-muted)' }}>Audience:</span>{' '}
+                                    <strong>{writingConfig.audienceType === 'Other' ? writingConfig.customAudience : writingConfig.audienceType}</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--gray-muted)' }}>Tone:</span>{' '}
+                                    <strong>{writingConfig.primaryTone}{writingConfig.secondaryTone ? ` + ${writingConfig.secondaryTone}` : ''}</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--gray-muted)' }}>Length:</span>{' '}
+                                    <strong>{writingConfig.customWordCount ? `${writingConfig.customWordCount} words` : `${writingConfig.lengthSlider}`}</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: 'var(--gray-muted)' }}>Intent:</span>{' '}
+                                    <strong>{writingConfig.contentIntent}</strong>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
                             <p className="article-intro" style={{ fontStyle: 'italic', marginBottom: '16px', color: 'var(--gray-muted)' }}>
                               {String(finalArticlePayload.introduction || '')}
                             </p>

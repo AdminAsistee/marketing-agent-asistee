@@ -1119,6 +1119,45 @@ ${websiteContext || 'None provided'}
                                             <span>Average reading speed: 225 wpm</span>
                                           </div>
                                         )}
+
+                                        {/* Writing Style Preferences Metadata */}
+                                        {(() => {
+                                          const statusLog = improvementLogs.find(l => l.agent_name === 'pipeline_status');
+                                          const inputPayload = statusLog ? parsePayload(statusLog.input) : null;
+                                          const writingConfig = inputPayload?.writingConfiguration as any;
+                                          if (!writingConfig) return null;
+                                          return (
+                                            <div style={{
+                                              background: 'rgba(255, 255, 255, 0.02)',
+                                              border: '1px solid var(--card-border)',
+                                              borderRadius: '8px',
+                                              padding: '10px 14px',
+                                              marginBottom: '16px',
+                                              display: 'flex',
+                                              flexWrap: 'wrap',
+                                              gap: '14px',
+                                              fontSize: '0.85rem'
+                                            }} className="writing-preferences-metadata">
+                                              <div>
+                                                <span style={{ color: 'var(--gray-muted)' }}>Audience:</span>{' '}
+                                                <strong>{writingConfig.audienceType === 'Other' ? writingConfig.customAudience : writingConfig.audienceType}</strong>
+                                              </div>
+                                              <div>
+                                                <span style={{ color: 'var(--gray-muted)' }}>Tone:</span>{' '}
+                                                <strong>{writingConfig.primaryTone}{writingConfig.secondaryTone ? ` + ${writingConfig.secondaryTone}` : ''}</strong>
+                                              </div>
+                                              <div>
+                                                <span style={{ color: 'var(--gray-muted)' }}>Length:</span>{' '}
+                                                <strong>{writingConfig.customWordCount ? `${writingConfig.customWordCount} words` : `${writingConfig.lengthSlider}`}</strong>
+                                              </div>
+                                              <div>
+                                                <span style={{ color: 'var(--gray-muted)' }}>Intent:</span>{' '}
+                                                <strong>{writingConfig.contentIntent}</strong>
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
+
                                         <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--gray-muted)', marginTop: '6px' }}>{finalArticlePayload.introduction}</p>
                                       </div>
 

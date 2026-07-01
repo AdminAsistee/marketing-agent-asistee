@@ -1,6 +1,6 @@
 import { ai, AGENT_MODELS } from './gemini';
 import { logger } from './logger';
-import type { WriterDraft, ResearchResult, AgentName, SeoRecommendations } from './types';
+import type { WriterDraft, ResearchResult, AgentName, SeoRecommendations, WritingConfiguration } from './types';
 
 // Enforce the exact JSON schema requested by the user and defined in types.ts
 const writerResponseSchema = {
@@ -41,7 +41,8 @@ export async function writerAgent(
     max_attempts: number;
     is_revision: boolean;
   },
-  seoRecommendations?: SeoRecommendations
+  seoRecommendations?: SeoRecommendations,
+  writingConfiguration?: WritingConfiguration
 ): Promise<WriterDraft> {
   const startTime = Date.now();
   const inputPayload = {
@@ -52,6 +53,7 @@ export async function writerAgent(
     feedback,
     retry_metadata: retryMetadata,
     seo_recommendations: seoRecommendations,
+    writingConfiguration,
   };
 
   // Validate inputs
@@ -93,6 +95,91 @@ Follow these constraints strictly:
 5. Output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
     }
 
+    if (writingConfiguration) {
+      let configInstruction = `\n\nAdditionally, you must write the article conforming to these specific content customization preferences:`;
+      
+      const primary = writingConfiguration.primaryTone || 'Professional';
+      const secondary = writingConfiguration.secondaryTone;
+      configInstruction += `\n- Tone/Voice: The primary tone must be "${primary}".`;
+      if (secondary) {
+        configInstruction += ` The secondary tone should blend in elements of "${secondary}".`;
+      }
+      
+      const audience = writingConfiguration.audienceType || 'General audience';
+      const customAud = writingConfiguration.customAudience;
+      const targetAud = audience === 'Other' && customAud ? customAud : audience;
+      configInstruction += `\n- Target Audience: The article is written specifically for "${targetAud}". Tailor vocabulary, style, and explanation depth for this group.`;
+
+      const formality = writingConfiguration.formalityLevel || 3;
+      const formalityDescriptions = [
+        "Very casual (conversational, colloquial, relaxed)",
+        "Casual (friendly, accessible, low formality)",
+        "Balanced (approachable yet professional, natural)",
+        "Professional (structured, business-ready, clean)",
+        "Highly formal (academic, authoritative, highly precise)"
+      ];
+      configInstruction += `\n- Formality Level: ${formality}/5 - ${formalityDescriptions[formality - 1]}.`;
+
+      const domain = writingConfiguration.domainIndustry || '';
+      const customDom = writingConfiguration.customDomainIndustry;
+      const targetDom = domain === 'Other' && customDom ? customDom : domain;
+      if (targetDom) {
+        configInstruction += `\n- Domain/Industry Context: "${targetDom}". Use appropriate industry terminology, examples, and contextual jargon correctly.`;
+      }
+
+      const intent = writingConfiguration.contentIntent || 'Inform readers';
+      configInstruction += `\n- Article Goal/Intent: "${intent}".`;
+      if (intent === 'Generate leads') {
+        configInstruction += ` Prioritize highlighting benefits, using strong Calls-To-Action (CTAs), and structure sections to be highly conversion-focused.`;
+      } else if (intent === 'Inform readers' || intent === 'Explain a concept') {
+        configInstruction += ` Prioritize deep explanations, clear examples, educational analogies, and thorough definitions.`;
+      } else if (intent === 'Rank on Google') {
+        configInstruction += ` Ensure content matches searcher intent comprehensively, covers subtopics fully, and provides maximum value.`;
+      } else if (intent === 'Sell a product') {
+        configInstruction += ` Highlight features, advantages, customer benefits, and strong product integration with clear purchase incentives.`;
+      } else if (intent === 'Build authority' || intent === 'Compare options') {
+        configInstruction += ` Provide objective, unbiased, expert comparisons, detailed feature comparisons, and well-researched viewpoints.`;
+      }
+
+      const paraStyle = writingConfiguration.paragraphStyle || 'Balanced';
+      if (paraStyle === 'Short') {
+        configInstruction += `\n- Paragraph Style: Short paragraphs (mobile-friendly writing with frequent line breaks, 1-3 sentences per paragraph).`;
+      } else if (paraStyle === 'Long') {
+        configInstruction += `\n- Paragraph Style: Long-form paragraphs (traditional deep article style, allowing expanded explanations and longer, cohesive paragraphs).`;
+      } else {
+        configInstruction += `\n- Paragraph Style: Balanced paragraphs (combination of short, punchy statements and deeper, informative paragraphs).`;
+      }
+
+      let formattingRules = [];
+      if (writingConfiguration.allowBullets) formattingRules.push("bullet point lists");
+      if (writingConfiguration.allowNumberedLists) formattingRules.push("numbered lists");
+      if (writingConfiguration.allowTables) formattingRules.push("structured Markdown tables");
+      if (writingConfiguration.allowHeadings) formattingRules.push("clear Markdown headings (H2, H3)");
+      if (writingConfiguration.allowExamples) formattingRules.push("concrete real-world examples");
+      
+      if (formattingRules.length > 0) {
+        configInstruction += `\n- Allowed Formatting Elements: You are encouraged to use ${formattingRules.join(', ')} where appropriate to improve readability.`;
+      } else {
+        configInstruction += `\n- Formatting Restraints: Do NOT use lists or tables. Rely entirely on structured paragraphs and headers.`;
+      }
+
+      const customWords = parseInt(String(writingConfiguration.customWordCount || ''));
+      const lengthSlider = writingConfiguration.lengthSlider || 'Medium';
+      let wordConstraint = "";
+      if (!isNaN(customWords) && customWords > 0) {
+        wordConstraint = `Aim for approximately ${customWords} words (within ±10% margin).`;
+      } else if (lengthSlider === 'Short') {
+        wordConstraint = "Write a shorter article of 500-800 words.";
+      } else if (lengthSlider === 'Long') {
+        wordConstraint = "Write a long, comprehensive, in-depth article of 2000+ words.";
+      } else {
+        wordConstraint = "Write a medium-length article of 1000-1500 words.";
+      }
+      configInstruction += `\n- Length Goal: ${wordConstraint} Structure the sections and content depth accordingly to meet this target naturally.`;
+
+      systemInstruction += configInstruction;
+    }
+
     let contents = `PRD details:\n${prd}\n\nWeb Research findings:\n${research.summary}\n\nSources cited:\n${JSON.stringify(
       research.sources,
       null,
@@ -112,6 +199,10 @@ Follow these strict SEO writing rules:
 3. Structure the content cleanly (with headings and subheadings) to maximize search visibility.`;
 
       contents += `\n\nSEO Recommendations:\n${JSON.stringify(seoRecommendations, null, 2)}`;
+    }
+
+    if (writingConfiguration) {
+      contents += `\n\nWriting Configuration:\n${JSON.stringify(writingConfiguration, null, 2)}`;
     }
 
     if (previousDraft && feedback) {

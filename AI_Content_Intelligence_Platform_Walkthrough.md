@@ -394,7 +394,28 @@ Each agent has a specific job in the content generation and optimization flow.
 
 ---
 
-## Section 8: Future Improvements
+## Section 8: Content Customization Layer
+
+The platform provides a **Content Customization Layer** that lets writers configure targeted parameters for article generation without manual prompting:
+
+- **Voice & Tone:** Blend primary and secondary tones (e.g., Professional, Storytelling, Conversational, Technical).
+- **Target Audience:** Address specific reader groups (Beginners, Experts, Business Executives, Customers) or custom descriptions.
+- **Formality Level:** Adjust formality with a 5-step CASUAL-to-FORMAL slider.
+- **Industry/Domain:** Specify industry context for proper terminology and contextual examples.
+- **Goal/Intent:** Align structure with objectives (e.g. Generate leads prioritizes CTAs and benefits, while Inform readers focuses on educational explanations).
+- **Paragraph & Layout:** Toggle list styles, tables, custom word counts, and paragraph lengths.
+
+### Customization Impact Example
+- **Generic Generation:** *"Write an article about coffee."* -> Plain, generic description.
+- **Customized Generation:**
+  - *Audience: Beginner coffee drinkers*
+  - *Tone: Friendly, Educational*
+  - *Length: 1000 words*
+  -> Result: Structured home-barista guide with clear brewing steps, optimal ratios, and helpful definitions.
+
+---
+
+## Section 9: Future Improvements
 
 The platform has been designed to support easy future expansion:
 1. **Google Search Console Integration:** Integrate Google Search Console APIs to fetch real-world search impressions, clicks, and average position data directly into the dashboard.

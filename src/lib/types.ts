@@ -170,3 +170,22 @@ export interface OriginalityReport {
   exclusive_content_opportunities: string[];
 }
 
+export interface WritingConfiguration {
+  primaryTone: string;
+  secondaryTone?: string;
+  audienceType: string;
+  customAudience?: string;
+  formalityLevel: number;
+  domainIndustry?: string;
+  customDomainIndustry?: string;
+  contentIntent: string;
+  paragraphStyle: 'Short' | 'Long' | 'Balanced';
+  allowBullets: boolean;
+  allowNumberedLists: boolean;
+  allowTables: boolean;
+  allowHeadings: boolean;
+  allowExamples: boolean;
+  lengthSlider: 'Short' | 'Medium' | 'Long';
+  customWordCount?: number;
+}
+

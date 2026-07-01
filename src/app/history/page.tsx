@@ -13,6 +13,7 @@ interface HistoryRecord {
   error?: string;
   inputSummary: string;
   outputPreview: string;
+  writingConfiguration?: any;
 }
 
 export default function HistoryPage() {
@@ -53,6 +54,7 @@ export default function HistoryPage() {
       const resolvedRecords: HistoryRecord[] = Array.from(uniqueMap.values()).map((log) => {
         const input = typeof log.input === 'string' ? JSON.parse(log.input) : log.input;
         const output = typeof log.output === 'string' ? JSON.parse(log.output) : log.output;
+        const writingConfiguration = input?.writingConfiguration || null;
         
         // Map legacy feature names to standard names
         let feature = input?.feature || 'Generate Article';
@@ -109,7 +111,8 @@ export default function HistoryPage() {
           status: status,
           error: output?.error,
           inputSummary,
-          outputPreview
+          outputPreview,
+          writingConfiguration
         };
       });
 
@@ -299,6 +302,19 @@ export default function HistoryPage() {
                 <span style={{ color: 'var(--gray-muted)', fontWeight: 600, display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '2px' }}>User Input Summary</span>
                 {record.inputSummary}
               </div>
+
+              {/* Configuration display for Article Generation */}
+              {record.writingConfiguration && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--foreground)', background: 'rgba(255, 255, 255, 0.02)', padding: '10px 14px', borderRadius: '6px', border: '1px solid var(--card-border)' }} onClick={(e) => e.stopPropagation()}>
+                  <span style={{ color: 'var(--gray-muted)', fontWeight: 600, display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '4px' }}>Configuration Settings</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                    <div><strong>Tone:</strong> {record.writingConfiguration.primaryTone}{record.writingConfiguration.secondaryTone ? `, ${record.writingConfiguration.secondaryTone}` : ''}</div>
+                    <div><strong>Audience:</strong> {record.writingConfiguration.audienceType === 'Other' ? record.writingConfiguration.customAudience : record.writingConfiguration.audienceType}</div>
+                    <div><strong>Length:</strong> {record.writingConfiguration.customWordCount ? `${record.writingConfiguration.customWordCount} words` : `${record.writingConfiguration.lengthSlider}`}</div>
+                    {record.writingConfiguration.contentIntent && <div><strong>Intent:</strong> {record.writingConfiguration.contentIntent}</div>}
+                  </div>
+                </div>
+              )}
 
               {/* Output Preview & View Result Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '12px' }}>

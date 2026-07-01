@@ -44,7 +44,8 @@ async function checkIfCancelled(runId: string): Promise<boolean> {
 async function runPipelineInBackground(
   runId: string,
   prd: string,
-  seoRecommendations: any
+  seoRecommendations: any,
+  writingConfiguration?: any
 ) {
   const startTime = Date.now();
   const topic = getPrdTopic(prd);
@@ -83,7 +84,8 @@ async function runPipelineInBackground(
       undefined,
       'writer_agent_attempt_1',
       { attempt: 1, max_attempts: 3, is_revision: false },
-      seoRecommendations
+      seoRecommendations,
+      writingConfiguration
     );
 
     // Step 3: Run Initial Fact Checker Attempt
@@ -121,7 +123,8 @@ async function runPipelineInBackground(
         factCheckResult.feedback,
         `writer_agent_revision_${retryCount}`,
         { attempt: retryCount + 1, max_attempts: 3, is_revision: true },
-        seoRecommendations
+        seoRecommendations,
+        writingConfiguration
       );
 
       // Run Fact Checker Agent on the revised draft
@@ -204,7 +207,7 @@ async function runPipelineInBackground(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { prd, seoRecommendations } = body;
+    const { prd, seoRecommendations, writingConfiguration } = body;
     let runId = body.runId;
 
     // Robust validation: Check for empty or malformed inputs
@@ -247,13 +250,19 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
+      input: { 
+        title: topic, 
+        feature: featureType, 
+        prdSnippet: prd.slice(0, 150), 
+        hasSeoRecs: !!seoRecommendations,
+        writingConfiguration
+      },
       output: { status: 'Running' },
       latency_ms: 0
     });
 
     // 2. Start the pipeline in the background (asynchronous, non-blocking)
-    runPipelineInBackground(runId, prd, seoRecommendations).catch((err) => {
+    runPipelineInBackground(runId, prd, seoRecommendations, writingConfiguration).catch((err) => {
       console.error(`[BACKGROUND ERROR] Pipeline background process crashed:`, err);
     });
 
