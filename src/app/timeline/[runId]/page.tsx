@@ -388,7 +388,7 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                       <div className="final-evaluation-card">
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--info)', marginBottom: '10px' }}>📊 Final Evaluation</h2>
                         <p style={{ color: 'var(--gray-muted)', fontSize: '0.9rem', marginBottom: '20px' }}>
-                          Day 5 Rubric Grader scores and verification feedback.
+                          Rubric Grader scores and verification feedback.
                         </p>
 
                         {/* Pipeline Telemetry Metrics */}
