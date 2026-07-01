@@ -2,7 +2,7 @@
 
 import React, { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-
+import { supabase } from '@/lib/supabase';
 
 interface AgentLog {
   id: string;
@@ -23,40 +23,66 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
   const [triggerFetch, setTriggerFetch] = useState(0);
   const [viewMode, setViewMode] = useState<'timeline' | 'tabs'>('tabs');
   const [activeTabId, setActiveTabId] = useState<string>('final-product');
+  const [stopping, setStopping] = useState(false);
+  const [pipelineStatus, setPipelineStatus] = useState<'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'>('Pending');
 
   useEffect(() => {
     if (!runId) return;
     let active = true;
+    let intervalId: NodeJS.Timeout;
     
-    Promise.resolve().then(() => {
-      if (active) {
-        setLoading(true);
-        setError(null);
-      }
-    });
+    const fetchLogs = () => {
+      fetch(`/api/logs?runId=${runId}`)
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then((errData) => {
+              throw new Error(errData.error || 'Failed to fetch logs.');
+            });
+          }
+          return res.json();
+        })
+        .then((data) => {
+          if (!active) return;
+          const logList = data || [];
+          setLogs(logList);
+          setLoading(false);
 
-    fetch(`/api/logs?runId=${runId}`)
-      .then((res) => {
-        if (!res.ok) {
-          return res.json().then((errData) => {
-            throw new Error(errData.error || 'Failed to fetch logs.');
-          });
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (!active) return;
-        setLogs(data || []);
-        setLoading(false);
-      })
-      .catch((err: { message?: string }) => {
-        if (!active) return;
-        setError(err.message || 'Failed to fetch agent execution logs.');
-        setLoading(false);
-      });
+          // Find the pipeline_status log to see if it is finished
+          const statusLog = logList.find((l: any) => l.agent_name === 'pipeline_status');
+          if (statusLog) {
+            const out = parsePayload(statusLog.output);
+            const status = out.status as 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled';
+            setPipelineStatus(status);
+            
+            if (status === 'Completed' || status === 'Failed' || status === 'Cancelled') {
+              clearInterval(intervalId);
+            }
+          } else {
+            if (logList.length > 0) {
+              setPipelineStatus('Running');
+            } else {
+              setPipelineStatus('Pending');
+            }
+          }
+        })
+        .catch((err: { message?: string }) => {
+          if (!active) return;
+          console.error('Error fetching logs:', err);
+          if (logs.length > 0) {
+            setError(err.message || 'Failed to fetch agent execution logs.');
+          }
+          setLoading(false);
+        });
+    };
+
+    fetchLogs();
+    
+    // Poll every 1.5 seconds
+    intervalId = setInterval(fetchLogs, 1500);
 
     return () => {
       active = false;
+      clearInterval(intervalId);
     };
   }, [runId, triggerFetch]);
 
@@ -74,6 +100,50 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
       return val as Record<string, unknown>;
     }
     return {};
+  };
+
+  // Stop / Cancel handler
+  const handleStop = async () => {
+    setStopping(true);
+    try {
+      const res = await fetch('/api/generate/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId })
+      });
+      if (res.ok) {
+        setPipelineStatus('Cancelled');
+      }
+    } catch (err) {
+      console.error('Failed to cancel pipeline:', err);
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  // Word count and reading time calculation
+  const getReadingTime = (payload: any) => {
+    if (!payload) return null;
+    let text = `${payload.title || ''} ${payload.introduction || ''} ${payload.conclusion || ''}`;
+    if (Array.isArray(payload.sections)) {
+      payload.sections.forEach((s: any) => {
+        text += ` ${s.heading || ''} ${s.content || ''}`;
+      });
+    }
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    const wordCount = words.length;
+    if (wordCount === 0) return null;
+
+    const wpm = 225; // 200-250 words per minute average
+    const totalSeconds = Math.round((wordCount / wpm) * 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    
+    return {
+      word_count: String(wordCount),
+      reading_time_minutes: String(minutes),
+      reading_time_seconds: String(seconds)
+    };
   };
 
   // Classifies the agent execution for naming, badge, and timeline colors
@@ -143,14 +213,132 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
     };
   };
 
+  // Progress steps evaluator
+  const getStageStatus = (stage: string) => {
+    const hasResearch = logs.some(l => l.agent_name === 'research');
+    const hasWriter = logs.some(l => l.agent_name.startsWith('writer_agent_attempt'));
+    const hasFactChecker = logs.some(l => l.agent_name.startsWith('fact_checker_attempt'));
+    const hasStylePolisher = logs.some(l => l.agent_name === 'style-polisher');
+    const hasRubricGrader = logs.some(l => l.agent_name === 'rubric-grader');
+    
+    const factCheckerLogs = logs.filter(l => l.agent_name.startsWith('fact_checker_attempt'));
+    const latestFactCheck = factCheckerLogs.length > 0 ? parsePayload(factCheckerLogs[factCheckerLogs.length - 1].output) : null;
+    const isFactCheckPassed = latestFactCheck?.passed === true;
+
+    const isCancelled = pipelineStatus === 'Cancelled';
+    const isFailed = pipelineStatus === 'Failed';
+    const isFinished = pipelineStatus === 'Completed';
+
+    switch (stage) {
+      case 'requirements':
+        return { status: 'completed', text: '✓ Understanding requirements' };
+      
+      case 'research':
+        if (hasResearch) {
+          const l = logs.find(log => log.agent_name === 'research');
+          const out = parsePayload(l?.output);
+          if (out.error) return { status: 'failed', text: '✗ Researching sources failed' };
+          return { status: 'completed', text: '✓ Researching sources completed' };
+        }
+        if (isCancelled) return { status: 'failed', text: '⊘ Researching sources cancelled' };
+        if (isFailed) return { status: 'failed', text: '✗ Researching sources failed' };
+        return { status: 'running', text: '● Researching sources...' };
+      
+      case 'writer':
+        if (hasWriter) {
+          return { status: 'completed', text: '✓ Writing initial article draft completed' };
+        }
+        if (!hasResearch) return { status: 'pending', text: '○ Writing article draft' };
+        if (isCancelled) return { status: 'failed', text: '⊘ Writing article draft cancelled' };
+        if (isFailed) return { status: 'failed', text: '✗ Writing article draft failed' };
+        return { status: 'running', text: '● Writing article draft...' };
+      
+      case 'fact-check':
+        if (hasFactChecker) {
+          if (isFinished || hasRubricGrader) {
+            return {
+              status: isFactCheckPassed ? 'completed' : 'warning',
+              text: isFactCheckPassed
+                ? '✓ Fact-check verification passed'
+                : '✓ Fact-check finished (failed verification, style polisher bypassed)'
+            };
+          }
+          const isLooping = !isFactCheckPassed && !isFailed && !isCancelled;
+          if (isLooping) {
+            return { status: 'running', text: `● Revision Loop: Correcting claims (Attempt ${factCheckerLogs.length + 1})...` };
+          }
+          return { status: 'completed', text: `✓ Fact-check verification (Attempt ${factCheckerLogs.length} finished)` };
+        }
+        if (!hasWriter) return { status: 'pending', text: '○ Running claim verification' };
+        if (isCancelled) return { status: 'failed', text: '⊘ Verification cancelled' };
+        if (isFailed) return { status: 'failed', text: '✗ Verification failed' };
+        return { status: 'running', text: '● Running claim verification...' };
+      
+      case 'style':
+        if (hasStylePolisher) {
+          return { status: 'completed', text: '✓ Style and tone polishing completed' };
+        }
+        if (hasFactChecker && !isFactCheckPassed && (isFinished || hasRubricGrader)) {
+          return { status: 'skipped', text: '○ Style polishing bypassed (verification failed)' };
+        }
+        if (!hasFactChecker || !isFactCheckPassed) return { status: 'pending', text: '○ Polishing style & tone' };
+        if (isCancelled) return { status: 'failed', text: '⊘ Style polishing cancelled' };
+        if (isFailed) return { status: 'failed', text: '✗ Style polishing failed' };
+        return { status: 'running', text: '● Polishing style & tone...' };
+      
+      case 'rubric':
+        if (hasRubricGrader) {
+          return { status: 'completed', text: '✓ Final quality evaluation completed' };
+        }
+        if (!hasStylePolisher && !(hasFactChecker && !isFactCheckPassed && (isFinished || hasRubricGrader))) {
+          return { status: 'pending', text: '○ Grading quality rubrics' };
+        }
+        if (isCancelled) return { status: 'failed', text: '⊘ Quality grading cancelled' };
+        if (isFailed) return { status: 'failed', text: '✗ Quality grading failed' };
+        return { status: 'running', text: '● Grading quality rubrics...' };
+        
+      default:
+        return { status: 'pending', text: '' };
+    }
+  };
+
   // Determine pipeline execution flow state
   const getPipelineBanner = () => {
+    if (pipelineStatus === 'Cancelled') {
+      return (
+        <div className="flow-status-banner error" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          ⊘ Generation cancelled by user.
+        </div>
+      );
+    }
+    if (pipelineStatus === 'Failed') {
+      return (
+        <div className="flow-status-banner error" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          ⚠️ Pipeline execution failed. Please check the logs.
+        </div>
+      );
+    }
+    if (pipelineStatus === 'Running' || pipelineStatus === 'Pending') {
+      return (
+        <div className="flow-status-banner info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <span>● Pipeline executing in real-time...</span>
+          <button 
+            onClick={handleStop} 
+            disabled={stopping} 
+            className="btn" 
+            style={{ background: 'var(--error)', color: '#fff', border: 'none', padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer', boxShadow: 'none' }}
+          >
+            {stopping ? 'Stopping...' : 'Stop Generation'}
+          </button>
+        </div>
+      );
+    }
+
     if (logs.length === 0) return null;
 
     const factCheckLogs = logs.filter(l => l.agent_name.startsWith('fact_checker_attempt'));
     const writerRevisionLogs = logs.filter(l => l.agent_name.startsWith('writer_agent_revision'));
     
-    // Check if any fact checks failed
     const hasFailures = factCheckLogs.some(l => {
       const out = parsePayload(l.output);
       return out.passed !== true;
@@ -190,8 +378,9 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
   };
 
   // Calculate pipeline stats
-  const totalLatencyMs = logs.reduce((sum, log) => sum + (log.latency_ms || 0), 0);
-  const totalTokens = logs.reduce((sum, log) => sum + (log.token_count || 0), 0);
+  const filterNonAgentLogs = logs.filter(l => l.agent_name !== 'pipeline_status');
+  const totalLatencyMs = filterNonAgentLogs.reduce((sum, log) => sum + (log.latency_ms || 0), 0);
+  const totalTokens = filterNonAgentLogs.reduce((sum, log) => sum + (log.token_count || 0), 0);
 
   const formatLatency = (ms: number) => {
     if (ms < 1000) return `${ms}ms`;
@@ -207,6 +396,16 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
     setTriggerFetch(prev => prev + 1);
   };
 
+  // Stages definition
+  const progressStages = [
+    { key: 'requirements', label: 'Understanding requirements' },
+    { key: 'research', label: 'Researching sources' },
+    { key: 'writer', label: 'Writing article' },
+    { key: 'fact-check', label: 'Quality checking / verification' },
+    { key: 'style', label: 'Finalizing style & tone' },
+    { key: 'rubric', label: 'Quality scoring' }
+  ];
+
   return (
     <div className="container">
       <div className="header" style={{ textAlign: 'left' }}>
@@ -216,32 +415,66 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
         </p>
       </div>
 
-      {loading ? (
+      {loading && logs.length === 0 ? (
         <div className="card loader-container">
           <div className="spinner"></div>
-          <p className="loading-text">Loading Lifecycle Logs...</p>
-        </div>
-      ) : error ? (
-        <div className="card" style={{ borderLeft: '4px solid var(--error)' }}>
-          <h3 style={{ color: 'var(--error)', marginBottom: '8px' }}>Failed to retrieve logs</h3>
-          <p style={{ marginBottom: '16px' }}>{error}</p>
-          <button className="btn btn-primary" onClick={handleRefresh}>
-            Retry Fetching
-          </button>
-        </div>
-      ) : logs.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
-          <h3>No logs found for this run ID</h3>
-          <p style={{ color: 'var(--gray-muted)', marginTop: '8px', marginBottom: '20px' }}>
-            Verify that the run ID is correct and that telemetry was saved in Supabase.
-          </p>
-          <button className="btn btn-primary" onClick={handleRefresh}>
-            Refresh
-          </button>
+          <p className="loading-text">Starting Generation Pipeline...</p>
         </div>
       ) : (
         <>
           {getPipelineBanner()}
+
+          {/* Sequential Progress Tracker */}
+          <div className="card" style={{ margin: '0 0 30px 0', padding: '24px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
+              Pipeline Progress Tracking
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+              {progressStages.map((stage) => {
+                const info = getStageStatus(stage.key);
+                let color = 'var(--gray-muted)';
+                let isPulse = false;
+                let isStrikethrough = false;
+
+                if (info.status === 'completed') color = 'var(--success)';
+                if (info.status === 'warning') color = 'var(--warning)';
+                if (info.status === 'failed') color = 'var(--error)';
+                if (info.status === 'running') {
+                  color = 'var(--primary)';
+                  isPulse = true;
+                }
+                if (info.status === 'skipped') {
+                  color = 'var(--gray-muted)';
+                  isStrikethrough = true;
+                }
+
+                return (
+                  <div 
+                    key={stage.key} 
+                    style={{
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--card-border)',
+                      borderRadius: '8px',
+                      color: color,
+                      fontWeight: info.status === 'running' || info.status === 'completed' ? 700 : 500,
+                      textDecoration: isStrikethrough ? 'line-through' : 'none',
+                      animation: isPulse ? 'pulse-glowing 2s infinite' : 'none'
+                    }}
+                  >
+                    <style>{`
+                      @keyframes pulse-glowing {
+                        0% { background: rgba(99, 102, 241, 0.05); }
+                        50% { background: rgba(99, 102, 241, 0.15); }
+                        100% { background: rgba(99, 102, 241, 0.05); }
+                      }
+                    `}</style>
+                    {info.text || `○ ${stage.label}`}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* View Mode Toggle Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
@@ -276,9 +509,9 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
           </div>
 
           {(() => {
-            // Find final article and grader logs
-            const stylePolisherLog = logs.find((l) => l.agent_name === 'style-polisher');
-            const rubricGraderLog = logs.find((l) => l.agent_name === 'rubric-grader');
+            const filterLogs = logs.filter(l => l.agent_name !== 'pipeline_status');
+            const stylePolisherLog = filterLogs.find((l) => l.agent_name === 'style-polisher');
+            const rubricGraderLog = filterLogs.find((l) => l.agent_name === 'rubric-grader');
 
             let finalArticlePayload: Record<string, unknown> | null = null;
             if (stylePolisherLog && stylePolisherLog.output) {
@@ -289,7 +522,7 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
               }
             }
             if (!finalArticlePayload) {
-              const writerLogs = logs.filter(
+              const writerLogs = filterLogs.filter(
                 (l) => l.agent_name.startsWith('writer_agent_attempt') || l.agent_name.startsWith('writer_agent_revision')
               );
               if (writerLogs.length > 0) {
@@ -303,6 +536,9 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
               rubricPayload = parsePayload(rubricGraderLog.output);
             }
 
+            // Word count / reading time calculation
+            const readingTime = getReadingTime(finalArticlePayload);
+
             return viewMode === 'tabs' ? (
               <div className="tabs-layout">
                 {/* Tab Navigation Sidebar */}
@@ -313,7 +549,7 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                   >
                     🏆 Final Product & Grade
                   </button>
-                  {logs.map((log, idx) => {
+                  {filterLogs.map((log, idx) => {
                     const output = parsePayload(log.output);
                     const config = getAgentConfig(log.agent_name, output);
                     return (
@@ -341,21 +577,23 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                               This is the final text generated by the pipeline after validation and tone polishing.
                             </p>
                           </div>
-                          <button
-                            onClick={() => window.print()}
-                            className="btn btn-primary"
-                            style={{
-                              padding: '10px 20px',
-                              fontSize: '0.9rem',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              borderRadius: '8px',
-                              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
-                            }}
-                          >
-                            📄 Export to PDF
-                          </button>
+                          {finalArticlePayload && (
+                            <button
+                              onClick={() => window.print()}
+                              className="btn btn-primary"
+                              style={{
+                                padding: '10px 20px',
+                                fontSize: '0.9rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+                              }}
+                            >
+                              📄 Export to PDF
+                            </button>
+                          )}
                         </div>
                         
                         {finalArticlePayload ? (
@@ -378,9 +616,39 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                             <p className="article-conclusion" style={{ fontWeight: '600', marginTop: '16px' }}>
                               {String(finalArticlePayload.conclusion || '')}
                             </p>
+
+                            {/* Reading Time Estimates Display */}
+                            {readingTime && (
+                              <div style={{
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid var(--card-border)',
+                                borderRadius: '8px',
+                                padding: '14px',
+                                marginTop: '24px',
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr 1fr',
+                                gap: '12px',
+                                textAlign: 'center'
+                              }}>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Word Count</span>
+                                  <strong style={{ fontSize: '1.1rem' }}>{readingTime.word_count} words</strong>
+                                </div>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Reading Time</span>
+                                  <strong style={{ fontSize: '1.1rem' }}>
+                                    {readingTime.reading_time_minutes}m {readingTime.reading_time_seconds}s
+                                  </strong>
+                                </div>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Speed Metric</span>
+                                  <strong style={{ fontSize: '1.1rem', color: 'var(--info)' }}>225 WPM</strong>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)' }}>No final article generated yet.</p>
+                          <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)' }}>Draft content will display here once the Writing phase starts.</p>
                         )}
                       </div>
 
@@ -453,7 +721,7 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                     </div>
                   ) : (
                     // Render only the card corresponding to activeTabId
-                    logs.filter(l => l.id === activeTabId).map((log) => {
+                    filterLogs.filter(l => l.id === activeTabId).map((log) => {
                       const input = parsePayload(log.input);
                       const output = parsePayload(log.output);
                       const config = getAgentConfig(log.agent_name, output);
@@ -670,7 +938,7 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
             ) : (
               // Original continuous timeline scroll view
               <div className="timeline-container">
-                {logs.map((log) => {
+                {filterLogs.map((log) => {
                   const input = parsePayload(log.input);
                   const output = parsePayload(log.output);
                   const config = getAgentConfig(log.agent_name, output);

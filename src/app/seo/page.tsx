@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface TrendData {
@@ -11,15 +11,24 @@ interface TrendData {
   trendSummary: string;
 }
 
+interface KeywordSuggestion {
+  ranking: number;
+  keyword: string;
+  searchGrowth: string;
+  relevanceScore: number;
+  opportunityExplanation: string;
+}
+
 interface SeoRecommendations {
   primaryKeyword: string;
   secondaryKeywords: string[];
   contentIdeas: string[];
   recommendedTitles: string[];
   seoStrategy: string;
+  keywordSuggestions: KeywordSuggestion[];
 }
 
-export default function SeoPage() {
+function SeoPageContent() {
   const [keyword, setKeyword] = useState('');
   const [websiteContext, setWebsiteContext] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +36,60 @@ export default function SeoPage() {
   
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [recommendations, setRecommendations] = useState<SeoRecommendations | null>(null);
+  
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const runId = searchParams.get('runId');
+
+  // Load from runId query param if present
+  useEffect(() => {
+    if (!runId) return;
+
+    setLoading(true);
+    setError(null);
+    setTrendData(null);
+    setRecommendations(null);
+
+    fetch(`/api/logs?runId=${runId}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch logs for this run.');
+        }
+        return res.json();
+      })
+      .then((logs) => {
+        const seoAgentLog = logs.find((l: any) => l.agent_name === 'seo_agent');
+        const pipelineStatusLog = logs.find((l: any) => l.agent_name === 'pipeline_status');
+
+        if (seoAgentLog) {
+          const input = typeof seoAgentLog.input === 'string' ? JSON.parse(seoAgentLog.input) : seoAgentLog.input;
+          const output = typeof seoAgentLog.output === 'string' ? JSON.parse(seoAgentLog.output) : seoAgentLog.output;
+
+          setKeyword(input.keyword || '');
+          setWebsiteContext(input.websiteContext || '');
+          setTrendData(input.trendData || null);
+          setRecommendations(output || null);
+        } else if (pipelineStatusLog) {
+          const input = typeof pipelineStatusLog.input === 'string' ? JSON.parse(pipelineStatusLog.input) : pipelineStatusLog.input;
+          const output = typeof pipelineStatusLog.output === 'string' ? JSON.parse(pipelineStatusLog.output) : pipelineStatusLog.output;
+
+          setKeyword(input.title || '');
+          if (output.result) {
+            setTrendData(output.result.trendData || null);
+            setRecommendations(output.result.recommendations || null);
+          }
+        } else {
+          setError('No SEO analysis data found for this run ID.');
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message || 'Failed to retrieve SEO analysis from history.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [runId]);
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,6 +290,50 @@ export default function SeoPage() {
                   </div>
                 </div>
 
+                {/* Ranked Keyword Suggestions */}
+                {recommendations.keywordSuggestions && recommendations.keywordSuggestions.length > 0 && (
+                  <div className="form-group" style={{ marginBottom: '24px' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 700 }}>
+                      📊 Ranked Keyword Opportunities & Metrics
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {recommendations.keywordSuggestions
+                        .sort((a, b) => a.ranking - b.ranking)
+                        .map((s) => (
+                          <div
+                            key={s.ranking}
+                            style={{
+                              background: 'rgba(0,0,0,0.15)',
+                              border: '1px solid var(--card-border)',
+                              borderRadius: '8px',
+                              padding: '14px 18px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '6px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                              <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--foreground)' }}>
+                                {s.ranking}. {s.keyword}
+                              </span>
+                              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <span className="badge badge-warning" style={{ textTransform: 'none', padding: '4px 8px', fontWeight: 700 }}>
+                                  {s.searchGrowth}
+                                </span>
+                                <span className="badge badge-info" style={{ textTransform: 'none', padding: '4px 8px' }}>
+                                  Relevance: {s.relevanceScore}%
+                                </span>
+                              </div>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--gray-muted)', lineHeight: '1.5' }}>
+                              <strong>Content Opportunity:</strong> {s.opportunityExplanation}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="form-group" style={{ marginBottom: '24px' }}>
                   <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>SEO Content Strategy</h4>
                   <p style={{ background: 'rgba(0,0,0,0.15)', padding: '14px', borderRadius: '8px', lineHeight: '1.6', fontSize: '0.95rem' }}>{recommendations.seoStrategy}</p>
@@ -255,13 +361,24 @@ export default function SeoPage() {
                     </div>
                   </div>
                 </div>
-
               </div>
-
             </div>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+export default function SeoPage() {
+  return (
+    <Suspense fallback={
+      <div className="container loader-container">
+        <div className="spinner"></div>
+        <p className="loading-text">Loading...</p>
+      </div>
+    }>
+      <SeoPageContent />
+    </Suspense>
   );
 }

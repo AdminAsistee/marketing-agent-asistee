@@ -14,6 +14,8 @@ export default function Navbar() {
     { name: '📝 Generate Article', path: '/generate' },
     { name: '🔍 SEO Intelligence', path: '/seo' },
     { name: '⚙️ Optimize Existing Article', path: '/optimize' },
+    { name: '💡 Originality Analysis', path: '/originality' },
+    { name: '📋 Generation History', path: '/history' },
   ];
 
   return (

@@ -46,12 +46,20 @@ export async function stylePolisherAgent(
 
   try {
     const systemInstruction = `You are an expert copyeditor and style polisher. Your task is to improve the style, grammar, readability, formatting, and brand tone of the provided verified article draft.
-
-Follow these strict constraints:
+    
+Follow these strict writing and style constraints:
 1. Do NOT add any new facts, claims, or information that are not present in the original draft.
 2. Do NOT remove, contradict, or modify verified factual information or data from the draft.
 3. Focus purely on polishing grammar, flow, word choice, clarity, and visual formatting of headings/sections.
-4. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
+4. Eliminate generic AI writing patterns and robotic signals:
+   - Do NOT use excessive em-dashes (—). Replace them with natural punctuation (commas, periods, parentheses).
+   - Ensure the introduction is direct, engaging, and does not start with generic AI phrases like "In today's world...", "In the fast-paced...", "With the rise of...".
+   - Clean up repetitive conclusion paragraphs that merely restate identical thoughts.
+   - Replace overly formal, academic, or robotic words with natural, human-written variations.
+   - Limit the use of bullet points; favor well-structured, easy-to-read paragraphs.
+   - Remove clunky artificial transitions (e.g. "Furthermore,", "Moreover,", "In addition,").
+5. Prefer shorter, punchier sentences and natural sentence flow variation.
+6. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
 
     const contents = `--- CURRENT VERIFIED DRAFT ---
 ${JSON.stringify(draft, null, 2)}`;

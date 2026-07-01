@@ -180,6 +180,31 @@ Scores and analyzes an existing article draft against search trend data, highlig
 
 ---
 
+### Feature D: Generation History
+
+#### Purpose
+Allows content creators to persist and access all previous executions (SEO analyses, article generations, and optimization analyses) in a centralized history dashboard.
+
+#### User Steps
+1. Navigate to the **Generation History** page (`/history`).
+2. View the history list showing the Date, Topic/Title, Feature Used, and Status (Completed, Failed, Cancelled, Running).
+3. Click any record to reopen its complete analysis or article generation results instantly.
+
+---
+
+### Feature E: Content Originality Analysis
+
+#### Purpose
+Enables users to perform a search-grounded differentiation analysis on a topic or draft, identifying how their content can provide unique value beyond what already exists on the web.
+
+#### User Steps
+1. Navigate to the **Originality Analysis** page (`/originality`).
+2. Paste your draft or type in a topic, along with optional website context.
+3. Click **Analyze Uniqueness & Opportunities**.
+4. Review the originality dashboard containing missing angles, unique perspectives, interview suggestions, and follow-up cluster topics.
+
+---
+
 ## Section 3: Complete User Workflow Examples
 
 This end-to-end scenario outlines how a company uses the suite to find a keyword opportunity, draft a search-aligned article, and refine it before publishing.

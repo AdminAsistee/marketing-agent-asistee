@@ -107,18 +107,21 @@ export interface TrendData {
   trendSummary: string;
 }
 
+export interface KeywordSuggestion {
+  ranking: number;
+  keyword: string;
+  searchGrowth: string;
+  relevanceScore: number;
+  opportunityExplanation: string;
+}
+
 export interface SeoRecommendations {
   primaryKeyword: string;
   secondaryKeywords: string[];
   contentIdeas: string[];
   recommendedTitles: string[];
   seoStrategy: string;
-}
-
-export interface SeoInput {
-  keyword: string;
-  websiteContext?: string;
-  trendData: TrendData;
+  keywordSuggestions: KeywordSuggestion[];
 }
 
 export interface SeoOptimizationReport {
@@ -131,4 +134,18 @@ export interface SeoOptimizationReport {
   readability_feedback: string;
   improvement_suggestions: string[];
   optimized_title_options: string[];
+  strengths: string[];
+  weaknesses: string[];
+  seo_issues: string[];
+  missing_information: string[];
 }
+
+export interface OriginalityReport {
+  missing_angles: string[];
+  unique_perspectives: string[];
+  local_context_opportunities: string[];
+  potential_interviews: string[];
+  follow_up_topics: string[];
+  exclusive_content_opportunities: string[];
+}
+

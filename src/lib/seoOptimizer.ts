@@ -45,6 +45,26 @@ const seoOptimizerResponseSchema = {
       type: 'ARRAY',
       items: { type: 'STRING' },
       description: 'A list of 2-3 alternative optimized titles for the article.'
+    },
+    strengths: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+      description: 'List of core strengths identified in the current article draft.'
+    },
+    weaknesses: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+      description: 'List of core weaknesses or gaps identified in the current article draft.'
+    },
+    seo_issues: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+      description: 'List of specific SEO compliance issues (e.g. formatting, keyword utilization).'
+    },
+    missing_information: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+      description: 'Specific context, details, data points, or angles that are missing from the article.'
     }
   },
   required: [
@@ -56,7 +76,11 @@ const seoOptimizerResponseSchema = {
     'recommended_headings',
     'readability_feedback',
     'improvement_suggestions',
-    'optimized_title_options'
+    'optimized_title_options',
+    'strengths',
+    'weaknesses',
+    'seo_issues',
+    'missing_information'
   ]
 };
 
@@ -101,7 +125,11 @@ Provide a detailed optimization report returned as a structured JSON object matc
   "recommended_headings": ["string"],
   "readability_feedback": "string",
   "improvement_suggestions": ["string"],
-  "optimized_title_options": ["string"]
+  "optimized_title_options": ["string"],
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "seo_issues": ["string"],
+  "missing_information": ["string"]
 }
 
 Guidelines:
@@ -110,7 +138,12 @@ Guidelines:
 3. Identify missing keywords that should be integrated.
 4. Detect content gaps (unaddressed topics/questions) in the current article compared to trending search intent.
 5. Provide actionable, specific improvements and list optimized alternative titles.
-6. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.`;
+6. Provide a detailed original content evaluation including:
+   - "strengths": What the article does well (e.g. engaging tone, clear definitions).
+   - "weaknesses": Shortcomings in the article (e.g. dry explanation, lack of examples).
+   - "seo_issues": SEO mistakes or deficiencies (e.g. main keyword not in first paragraph, missing H2 structure).
+   - "missing_information": Explicit topics or details that must be added to provide comprehensive value.
+7. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.`;
 
     const contents = `Existing Article Content:
 ${article}

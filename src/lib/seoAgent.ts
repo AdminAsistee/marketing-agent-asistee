@@ -27,9 +27,24 @@ const seoRecommendationsSchema = {
     seoStrategy: {
       type: 'STRING',
       description: 'A summary strategy explaining why these keywords and ideas were selected and how to structure content to rank.'
+    },
+    keywordSuggestions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          ranking: { type: 'INTEGER', description: 'Ranking number (1, 2, 3, etc.) based on search growth and opportunity' },
+          keyword: { type: 'STRING', description: 'The suggested search query' },
+          searchGrowth: { type: 'STRING', description: 'Growth percentage or traffic statement, e.g. "+250% increase" or "Estimated search interest: 50,000 users/month"' },
+          relevanceScore: { type: 'INTEGER', description: 'Relevance score from 1 to 100 based on keyword focus and business context' },
+          opportunityExplanation: { type: 'STRING', description: 'Explanation of how to leverage this keyword opportunity' }
+        },
+        required: ['ranking', 'keyword', 'searchGrowth', 'relevanceScore', 'opportunityExplanation']
+      },
+      description: 'Ranked list of specific search terms or keyword results with growth and opportunity metrics.'
     }
   },
-  required: ['primaryKeyword', 'secondaryKeywords', 'contentIdeas', 'recommendedTitles', 'seoStrategy']
+  required: ['primaryKeyword', 'secondaryKeywords', 'contentIdeas', 'recommendedTitles', 'seoStrategy', 'keywordSuggestions']
 };
 
 /**
@@ -64,7 +79,16 @@ You must output a JSON object matching this schema:
   "secondaryKeywords": ["string"],
   "contentIdeas": ["string"],
   "recommendedTitles": ["string"],
-  "seoStrategy": "string"
+  "seoStrategy": "string",
+  "keywordSuggestions": [
+    {
+      "ranking": 1,
+      "keyword": "string",
+      "searchGrowth": "string",
+      "relevanceScore": 90,
+      "opportunityExplanation": "string"
+    }
+  ]
 }
 
 Guidelines:
@@ -72,7 +96,14 @@ Guidelines:
 2. Provide secondary keywords that have high semantic relevance and search intent.
 3. Generate blog post ideas and titles that align with both the search trend interest and the website context.
 4. Provide a clear SEO strategy summarizing how the content should be structured to rank well.
-5. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.`;
+5. Create a ranked list of "keywordSuggestions" with:
+   - "ranking": Number starting at 1.
+   - "keyword": The keyword/query.
+   - "searchGrowth": Search growth percentage (e.g. "+250% increase") OR estimated search volume (e.g. "Estimated search interest: 50,000 users/month").
+     IMPORTANT: If exact search volume data is unavailable, clearly label estimates (using "Estimated search interest" or "Estimated searches: X users/month"). Do NOT fabricate exact values.
+   - "relevanceScore": Score from 1 to 100.
+   - "opportunityExplanation": Brief content opportunity explanation.
+6. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.`;
 
     const contents = `User Keyword/Topic: ${keyword}
 Business/Website Context: ${websiteContext || 'None provided'}

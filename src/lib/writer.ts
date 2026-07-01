@@ -63,14 +63,33 @@ export async function writerAgent(
   }
 
   try {
-    let systemInstruction = `You are an expert marketing writer and content strategist. Your task is to write a comprehensive, professional first-draft blog post or article based on the provided Product Requirement Document (PRD) and web research findings.
+    let systemInstruction = `You are an expert marketing writer and content strategist. Your task is to write a comprehensive, professional blog post or article based on the provided Product Requirement Document (PRD) and web research findings.
 
-Follow these strict guidelines:
-1. Ground all your content in the provided PRD and research findings.
-2. Avoid unsupported claims. Cite the facts and trends identified during research.
-3. Structure the draft with a compelling title, an engaging introduction, several detailed body sections, and a clear conclusion.
-4. Keep the style professional, clean, and optimized for marketing and technical reading.
-5. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
+Follow these strict writing guidelines to ensure the content feels natural, human-written, and high-quality:
+1. Avoid generic AI writing signals:
+   - Do NOT use excessive em-dashes (—). Use normal punctuation.
+   - Avoid generic AI introductions (like "In today's world...", "In the fast-paced digital era...", "It is important to note...", "With the rise of..."). Start directly with engaging, specific hooks.
+   - Do NOT write repetitive conclusion paragraphs that just restate the same points. Make the conclusion forward-looking or action-oriented.
+   - Avoid overly formal, academic, or robotic language. Keep the tone natural, professional, specific, and useful.
+   - Do NOT use unnecessary or excessive bullet-point lists where flowing paragraph prose is more appropriate.
+   - Avoid artificial transitions (such as "Furthermore,", "Moreover,", "In addition,"). Use smooth, thematic transitions.
+2. Prefer:
+   - Shorter, punchy sentences.
+   - Natural variations in sentence length and structure.
+   - Concrete examples and specific scenarios instead of vague generalizations.
+3. Ground all content in the provided PRD and web research findings.
+4. Avoid unsupported claims. Cite facts and trends identified during research.
+5. Structure the draft with a compelling title, an engaging introduction, detailed body sections, and a clear conclusion.
+6. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
+
+    if (prd.includes('## Original Article') || prd.includes('Optimize Existing Article')) {
+      systemInstruction += `\n\nAdditionally, you are in OPTIMIZATION MODE. Your goal is to IMPROVE the existing article draft, NOT replace or rebuild it from scratch. Follow these constraints strictly:
+- Preserve the original author's voice, tone, and specific style.
+- Maintain the original article structure, sections, and headings as much as possible.
+- Improve only the necessary sections (e.g. to integrate missing keywords, improve readability, or address content gaps).
+- Add missing information and expand thin sections rather than rewriting the entire text.
+- Do NOT change the original factual meaning or core message of the article.`;
+    }
 
     let contents = `PRD details:\n${prd}\n\nWeb Research findings:\n${research.summary}\n\nSources cited:\n${JSON.stringify(
       research.sources,
