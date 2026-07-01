@@ -47,8 +47,9 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
           setLogs(logList);
           setLoading(false);
 
-          // Find the pipeline_status log to see if it is finished
-          const statusLog = logList.find((l: any) => l.agent_name === 'pipeline_status');
+          // Find the latest pipeline_status log to see if it is finished
+          const statusLogs = logList.filter((l: any) => l.agent_name === 'pipeline_status');
+          const statusLog = statusLogs.length > 0 ? statusLogs[statusLogs.length - 1] : null;
           if (statusLog) {
             const out = parsePayload(statusLog.output);
             const status = out.status as 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled';
@@ -85,6 +86,20 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
       clearInterval(intervalId);
     };
   }, [runId, triggerFetch]);
+
+  // Dynamic document title update
+  useEffect(() => {
+    if (logs.length > 0) {
+      const statusLog = logs.find((l: any) => l.agent_name === 'pipeline_status');
+      const inputPayload = statusLog ? parsePayload(statusLog.input) : null;
+      const topic = inputPayload?.title || 'Run Details';
+      let feature = inputPayload?.feature || 'Timeline';
+      if (feature === 'Article Generation') feature = 'Generate Article';
+      document.title = `${feature}: ${topic}`;
+    } else {
+      document.title = `Timeline: Loading Run...`;
+    }
+  }, [logs]);
 
   // Utility to parse JSONB inputs/outputs robustly
   const parsePayload = (val: unknown): Record<string, unknown> => {
@@ -230,6 +245,11 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
     const isFinished = pipelineStatus === 'Completed';
 
     switch (stage) {
+      case 'seo-analysis':
+        return { status: 'completed', text: '✓ SEO analysis complete' };
+      case 'seo-recs':
+        return { status: 'completed', text: '✓ Keyword recommendations loaded' };
+      
       case 'requirements':
         return { status: 'completed', text: '✓ Understanding requirements' };
       
@@ -318,7 +338,16 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
         </div>
       );
     }
-    if (pipelineStatus === 'Running' || pipelineStatus === 'Pending') {
+    const getGenerationStatus = (): 'idle' | 'running' | 'completed' | 'cancelled' | 'failed' => {
+      if (pipelineStatus === 'Pending' || pipelineStatus === 'Running') return 'running';
+      if (pipelineStatus === 'Completed') return 'completed';
+      if (pipelineStatus === 'Cancelled') return 'cancelled';
+      if (pipelineStatus === 'Failed') return 'failed';
+      return 'idle';
+    };
+    const generationStatus = getGenerationStatus();
+
+    if (generationStatus === 'running') {
       return (
         <div className="flow-status-banner info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <span>● Pipeline executing in real-time...</span>
@@ -397,17 +426,73 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
   };
 
   // Stages definition
-  const progressStages = [
-    { key: 'requirements', label: 'Understanding requirements' },
-    { key: 'research', label: 'Researching sources' },
-    { key: 'writer', label: 'Writing article' },
-    { key: 'fact-check', label: 'Quality checking / verification' },
-    { key: 'style', label: 'Finalizing style & tone' },
-    { key: 'rubric', label: 'Quality scoring' }
-  ];
+  const statusLog = logs.find((l: any) => l.agent_name === 'pipeline_status');
+  const inputPayload = statusLog ? parsePayload(statusLog.input) : null;
+  const isSeoOptimized = inputPayload?.feature === 'SEO-optimized article generation' || inputPayload?.hasSeoRecs === true;
+
+  const progressStages = isSeoOptimized
+    ? [
+        { key: 'seo-analysis', label: 'SEO analysis complete' },
+        { key: 'seo-recs', label: 'Keyword recommendations loaded' },
+        { key: 'requirements', label: 'Understanding requirements' },
+        { key: 'research', label: 'Researching sources' },
+        { key: 'writer', label: 'Writing article' },
+        { key: 'fact-check', label: 'Quality checking / verification' },
+        { key: 'style', label: 'Finalizing style & tone' },
+        { key: 'rubric', label: 'Quality scoring' }
+      ]
+    : [
+        { key: 'requirements', label: 'Understanding requirements' },
+        { key: 'research', label: 'Researching sources' },
+        { key: 'writer', label: 'Writing article' },
+        { key: 'fact-check', label: 'Quality checking / verification' },
+        { key: 'style', label: 'Finalizing style & tone' },
+        { key: 'rubric', label: 'Quality scoring' }
+      ];
 
   return (
     <div className="container">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          header, nav, .navbar, .header, .flow-status-banner, .tabs-sidebar, .final-evaluation-card, .export-actions, .timeline-card, .card, .container > *:not(.tabs-layout) {
+            display: none !important;
+          }
+          .container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .tabs-layout {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .tab-panel {
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .final-product-grid {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .final-article-card {
+            width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: transparent !important;
+          }
+          .final-article-card * {
+            color: #000000 !important;
+          }
+          .final-article-card .btn, .final-article-card .export-actions, .export-actions {
+            display: none !important;
+          }
+        }
+      `}} />
       <div className="header" style={{ textAlign: 'left' }}>
         <h1 className="title-gradient" style={{ fontSize: '2.2rem' }}>Pipeline Generation Lifecycle</h1>
         <p className="subtitle" style={{ fontSize: '0.95rem', fontFamily: 'var(--font-mono)' }}>
@@ -602,6 +687,26 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                               {String(finalArticlePayload.title || '')}
                             </h3>
                             
+                            {/* Reading Time Estimates Display (Moved Higher) */}
+                            {readingTime && (
+                              <div style={{
+                                color: 'var(--gray-muted)',
+                                fontSize: '0.85rem',
+                                marginTop: '4px',
+                                marginBottom: '16px',
+                                display: 'flex',
+                                gap: '14px',
+                                flexWrap: 'wrap',
+                                fontFamily: 'var(--font-mono)'
+                              }}>
+                                <span>{readingTime.word_count} words</span>
+                                <span>•</span>
+                                <span>{readingTime.reading_time_minutes} min read</span>
+                                <span>•</span>
+                                <span>Average reading speed: 225 wpm</span>
+                              </div>
+                            )}
+
                             <p className="article-intro" style={{ fontStyle: 'italic', marginBottom: '16px', color: 'var(--gray-muted)' }}>
                               {String(finalArticlePayload.introduction || '')}
                             </p>
@@ -616,36 +721,6 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
                             <p className="article-conclusion" style={{ fontWeight: '600', marginTop: '16px' }}>
                               {String(finalArticlePayload.conclusion || '')}
                             </p>
-
-                            {/* Reading Time Estimates Display */}
-                            {readingTime && (
-                              <div style={{
-                                background: 'rgba(255, 255, 255, 0.03)',
-                                border: '1px solid var(--card-border)',
-                                borderRadius: '8px',
-                                padding: '14px',
-                                marginTop: '24px',
-                                display: 'grid',
-                                gridTemplateColumns: '1fr 1fr 1fr',
-                                gap: '12px',
-                                textAlign: 'center'
-                              }}>
-                                <div>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Word Count</span>
-                                  <strong style={{ fontSize: '1.1rem' }}>{readingTime.word_count} words</strong>
-                                </div>
-                                <div>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Reading Time</span>
-                                  <strong style={{ fontSize: '1.1rem' }}>
-                                    {readingTime.reading_time_minutes}m {readingTime.reading_time_seconds}s
-                                  </strong>
-                                </div>
-                                <div>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', display: 'block', marginBottom: '4px' }}>Speed Metric</span>
-                                  <strong style={{ fontSize: '1.1rem', color: 'var(--info)' }}>225 WPM</strong>
-                                </div>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)' }}>Draft content will display here once the Writing phase starts.</p>

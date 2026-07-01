@@ -48,6 +48,11 @@ async function runPipelineInBackground(
 ) {
   const startTime = Date.now();
   const topic = getPrdTopic(prd);
+  const featureType = seoRecommendations 
+    ? 'SEO-optimized article generation' 
+    : (prd.includes('## Original Article') || prd.includes('Optimize Existing Article')
+        ? 'Optimize Existing Article'
+        : 'Generate Article');
   try {
     // Step 1: Research Agent (Google Search Grounding + Telemetry Logging)
     if (await checkIfCancelled(runId)) {
@@ -171,7 +176,7 @@ async function runPipelineInBackground(
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Article Generation' },
+      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
       output: { 
         status: 'Completed', 
         result: finalArticle,
@@ -189,7 +194,7 @@ async function runPipelineInBackground(
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Article Generation' },
+      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });
@@ -232,12 +237,17 @@ export async function POST(req: NextRequest) {
     console.log(`[PIPELINE START] Starting pipeline asynchronously with runId: ${runId}`);
 
     const topic = getPrdTopic(prd);
+    const featureType = seoRecommendations 
+      ? 'SEO-optimized article generation' 
+      : (prd.includes('## Original Article') || prd.includes('Optimize Existing Article')
+          ? 'Optimize Existing Article'
+          : 'Generate Article');
 
     // 1. Log the pipeline starting state to Supabase
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Article Generation' },
+      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
       output: { status: 'Running' },
       latency_ms: 0
     });

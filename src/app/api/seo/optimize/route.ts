@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword.trim(), feature: 'Article Optimization' },
+      input: { title: targetKeyword.trim(), feature: 'Optimize Existing Article', targetKeyword: targetKeyword.trim(), websiteContext, articleSnippet: article.slice(0, 150) },
       output: { status: 'Running' },
       latency_ms: 0
     });
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword.trim(), feature: 'Article Optimization' },
+      input: { title: targetKeyword.trim(), feature: 'Optimize Existing Article', targetKeyword: targetKeyword.trim(), websiteContext, articleSnippet: article.slice(0, 150) },
       output: { status: 'Completed', result: { trendData, report, article: article.trim() } },
       latency_ms: Date.now() - startTime
     });
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword ? targetKeyword.trim() : 'Optimization Run', feature: 'Article Optimization' },
+      input: { title: targetKeyword ? targetKeyword.trim() : 'Optimization Run', feature: 'Optimize Existing Article', targetKeyword: targetKeyword || '', websiteContext: '', articleSnippet: '' },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });

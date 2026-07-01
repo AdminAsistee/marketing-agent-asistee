@@ -83,12 +83,14 @@ Follow these strict writing guidelines to ensure the content feels natural, huma
 6. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
 
     if (prd.includes('## Original Article') || prd.includes('Optimize Existing Article')) {
-      systemInstruction += `\n\nAdditionally, you are in OPTIMIZATION MODE. Your goal is to IMPROVE the existing article draft, NOT replace or rebuild it from scratch. Follow these constraints strictly:
-- Preserve the original author's voice, tone, and specific style.
-- Maintain the original article structure, sections, and headings as much as possible.
-- Improve only the necessary sections (e.g. to integrate missing keywords, improve readability, or address content gaps).
-- Add missing information and expand thin sections rather than rewriting the entire text.
-- Do NOT change the original factual meaning or core message of the article.`;
+      systemInstruction = `You are an expert marketing writer and content editor. You are in OPTIMIZATION MODE.
+Your absolute priority is to IMPROVE the existing article draft provided in the input, NOT replace, rebuild, or override it with a completely new topic or different ideas.
+Follow these constraints strictly:
+1. Do NOT change the core topic, message, ideas, or arguments of the original article. Keep them identical.
+2. Keep the exact same structure, sections, and headings of the original article as much as possible. Only add new sections if explicitly recommended to fill content gaps.
+3. Preserve the original author's voice, tone, vocabulary, and specific writing style. Do not make unnecessary edits or rewrite sentences that are already good.
+4. Only make changes necessary to support its SEO performance (e.g., natural integration of missing keywords, addressing specific content gaps, improving formatting).
+5. Output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
     }
 
     let contents = `PRD details:\n${prd}\n\nWeb Research findings:\n${research.summary}\n\nSources cited:\n${JSON.stringify(

@@ -120,8 +120,13 @@ Analyzes search query trends and search interest metrics for any topic using liv
 
 #### Example Output
 * **Google Search Trends Summary:** Google Search interest in Pokemon cards remains high, driven by new expansion sets and collector interest. Search traffic peaks around vintage cards, valuation queries, and market trends.
-* **Related Queries:** `["Pokemon card values", "how to buy Pokemon cards", "rare Pokemon cards"]`
-* **Rising Queries:** `["Pokemon card market trends 2026", "rare Pokemon card prices 2026"]`
+* **Related Queries (Ranked):**
+  1. `Pokemon card values` (Growth: +250%, Interest: High)
+  2. `how to buy Pokemon cards` (Growth: +180%, Interest: High)
+  3. `rare Pokemon cards` (Growth: +120%, Interest: Medium)
+* **Rising Queries (Ranked):**
+  1. `Pokemon card market trends 2026` (Growth: Breakout, Interest: High, Opportunity Score: 95/100)
+  2. `rare Pokemon card prices 2026` (Growth: +350%, Interest: High, Opportunity Score: 88/100)
 * **Primary Keyword:** `Pokemon card investing`
 * **Secondary Keywords:** `["rare Pokemon cards", "Pokemon card prices", "Pokemon card market trends"]`
 * **Suggested Titles:**
@@ -158,17 +163,17 @@ Scores and analyzes an existing article draft against search trend data, highlig
 #### Workflow Diagram
 ```
   +------------------+     +--------------+     +-------------------------+     +------------------+
-  | Existing Article | --> | SEO Analysis | --> | Improvement Suggestions | --> | Optional Rewrite |
+  | Original Draft   | --> | fetchTrends  | --> | seoOptimizerAgent (Gemini)| --> | Recommendations  |
+  | & Target Keyword |     | (Mock trends)|     | Audit Score & Report    |     | (Score, Gaps)    |
   +------------------+     +--------------+     +-------------------------+     +------------------+
 ```
 
-#### Example Before & After
-* **Before (Weak Content):**
-  - **Title:** "Brewing Coffee"
-  - **Weakness:** Missing primary search keywords like "v60 technique," weak title, no headers, lacking water temperature specifics.
-* **After Optimization Report:**
+#### Example Output
   - **SEO Score:** `52/100`
-  - **Missing Keywords:** `["v60 pour over technique", "home coffee grinder", "water-to-coffee ratio"]`
+  - **Missing Keywords (Prioritized):**
+    1. `espresso brewing method` (Growth: +110%, Priority: High)
+    2. `pour over coffee ratio` (Growth: +95%, Priority: High)
+    3. `japanese iced coffee method` (Growth: +140%, Priority: Medium)
   - **Content Gaps:** No mention of the ideal water-to-coffee ratio or grind consistency.
   - **Optimized Titles:**
     - `Mastering the V60 Pour Over Technique at Home`

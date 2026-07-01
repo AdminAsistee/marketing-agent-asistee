@@ -46,6 +46,10 @@ function OptimizePageContent() {
   const [pipelineStatus, setPipelineStatus] = useState<'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled'>('Pending');
   const [optimizedDraft, setOptimizedDraft] = useState<any | null>(null);
 
+  const [resultsTab, setResultsTab] = useState<'audit' | 'pipeline'>('audit');
+  const [viewMode, setViewMode] = useState<'timeline' | 'tabs'>('tabs');
+  const [activeTabId, setActiveTabId] = useState<string>('final-product');
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const runId = searchParams.get('runId');
@@ -97,6 +101,7 @@ function OptimizePageContent() {
         if (writerLogs.length > 0) {
           setImprovementLogs(logs);
           setImproving(true); // Put the page into improving/completed view
+          setResultsTab('pipeline');
           
           const polisherLog = logs.find((l: any) => l.agent_name === 'style-polisher');
           let draftPayload = null;
@@ -136,12 +141,18 @@ function OptimizePageContent() {
           const logList = data || [];
           setImprovementLogs(logList);
 
-          const statusLog = logList.find((l: any) => l.agent_name === 'pipeline_status');
+          const statusLogs = logList.filter((l: any) => l.agent_name === 'pipeline_status');
+          const statusLog = statusLogs.length > 0 ? statusLogs[statusLogs.length - 1] : null;
           if (statusLog) {
             const out = typeof statusLog.output === 'string' ? JSON.parse(statusLog.output) : statusLog.output;
             setPipelineStatus(out.status);
 
             if (out.status === 'Completed' || out.status === 'Failed' || out.status === 'Cancelled') {
+              // Notify history subscribers in other tabs!
+              const channel = new BroadcastChannel('content_agent_history');
+              channel.postMessage({ type: 'history_updated' });
+              channel.close();
+
               // Retrieve final optimized draft
               const polisherLog = logList.find((l: any) => l.agent_name === 'style-polisher');
               let draftPayload = null;
@@ -165,12 +176,22 @@ function OptimizePageContent() {
         .catch(err => console.error('Error polling improvement logs:', err));
     };
 
+    fetchLogs(); // Fetch immediately
     const intervalId = setInterval(fetchLogs, 1500);
     return () => {
       active = false;
       clearInterval(intervalId);
     };
   }, [improving, currentRunId, pipelineStatus]);
+
+  // Dynamic document title update
+  useEffect(() => {
+    if (targetKeyword.trim()) {
+      document.title = `Optimize Existing Article: ${targetKeyword.trim()}`;
+    } else {
+      document.title = `Optimize Existing Article`;
+    }
+  }, [targetKeyword]);
 
   const handleOptimize = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,6 +230,11 @@ function OptimizePageContent() {
       setTrendData(data.trendData);
       setReport(data.report);
       setCurrentRunId(data.run_id);
+
+      // Notify history subscribers in other tabs!
+      const channel = new BroadcastChannel('content_agent_history');
+      channel.postMessage({ type: 'history_updated' });
+      channel.close();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(err);
@@ -265,6 +291,11 @@ ${websiteContext || 'None provided'}
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.error || `HTTP error! status: ${response.status}`);
       }
+
+      // Notify history subscribers in other tabs!
+      const channel = new BroadcastChannel('content_agent_history');
+      channel.postMessage({ type: 'history_updated' });
+      channel.close();
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       console.error(err);
@@ -285,6 +316,10 @@ ${websiteContext || 'None provided'}
       });
       if (res.ok) {
         setPipelineStatus('Cancelled');
+        // Notify history subscribers in other tabs!
+        const channel = new BroadcastChannel('content_agent_history');
+        channel.postMessage({ type: 'history_updated' });
+        channel.close();
       }
     } catch (err) {
       console.error('Failed to cancel pipeline:', err);
@@ -315,6 +350,87 @@ ${websiteContext || 'None provided'}
       word_count: String(wordCount),
       reading_time_minutes: String(minutes),
       reading_time_seconds: String(seconds)
+    };
+  };
+
+  const parsePayload = (val: unknown): Record<string, any> => {
+    if (!val) return {};
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val);
+      } catch {
+        return { raw: val };
+      }
+    }
+    if (val && typeof val === 'object') {
+      return val as Record<string, unknown>;
+    }
+    return {};
+  };
+
+  const getAgentConfig = (name: string, output: Record<string, unknown>) => {
+    const isError = output && output.error;
+
+    if (name === 'research') {
+      return {
+        title: 'Research Agent',
+        colorClass: 'info',
+        badge: isError ? 'badge-error' : 'badge-info',
+        statusText: isError ? 'FAILED' : 'SUCCESS',
+      };
+    }
+    if (name.startsWith('writer_agent_attempt')) {
+      const match = name.match(/\d+$/);
+      const attemptNum = match ? match[0] : '1';
+      return {
+        title: `Writer Agent (Attempt ${attemptNum})`,
+        colorClass: 'primary',
+        badge: isError ? 'badge-error' : 'badge-info',
+        statusText: isError ? 'FAILED' : 'SUCCESS',
+      };
+    }
+    if (name.startsWith('writer_agent_revision')) {
+      const match = name.match(/\d+$/);
+      const revNum = match ? match[0] : '1';
+      return {
+        title: `Writer Agent (Revision ${revNum})`,
+        colorClass: 'warning',
+        badge: isError ? 'badge-error' : 'badge-warning',
+        statusText: isError ? 'FAILED' : 'REVISED',
+      };
+    }
+    if (name.startsWith('fact_checker_attempt')) {
+      const match = name.match(/\d+$/);
+      const attemptNum = match ? match[0] : '1';
+      const passed = output && output.passed === true;
+      return {
+        title: `Fact Checker (Attempt ${attemptNum})`,
+        colorClass: passed ? 'success' : 'error',
+        badge: passed ? 'badge-success' : 'badge-error',
+        statusText: passed ? 'PASS' : 'FAILED',
+      };
+    }
+    if (name === 'style-polisher') {
+      return {
+        title: 'Style Polisher Agent',
+        colorClass: 'success',
+        badge: isError ? 'badge-error' : 'badge-success',
+        statusText: isError ? 'FAILED' : 'SUCCESS',
+      };
+    }
+    if (name === 'rubric-grader') {
+      return {
+        title: 'Rubric Grader Agent',
+        colorClass: 'primary',
+        badge: isError ? 'badge-error' : 'badge-success',
+        statusText: isError ? 'FAILED' : 'GRADED',
+      };
+    }
+    return {
+      title: name,
+      colorClass: 'info',
+      badge: 'badge-info',
+      statusText: 'DONE',
     };
   };
 
@@ -475,202 +591,884 @@ ${websiteContext || 'None provided'}
 
           {/* Report Results */}
           {trendData && report && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }} className="optimize-results-grid">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '30px' }} className="optimize-results-container">
               
-              {/* Top Row: Original Content Evaluation Analysis */}
-              <div className="card" style={{ margin: 0, borderLeft: `6px solid ${getScoreColor(report.seo_score)}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '20px' }}>
-                  <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>SEO Evaluation & Original Analysis</h2>
-                    <p style={{ color: 'var(--gray-muted)', margin: '4px 0 0 0', fontSize: '0.9rem' }}>Comparative evaluation of the original article draft.</p>
-                  </div>
-                  <div style={{
-                    background: 'rgba(0,0,0,0.25)',
+              {/* Tab Navigation at the top of Results */}
+              <div className="tab-navigation" style={{ display: 'flex', gap: '10px', borderBottom: '1px solid var(--card-border)', paddingBottom: '12px' }}>
+                <button
+                  type="button"
+                  className={`tab-btn ${resultsTab === 'audit' ? 'active' : ''}`}
+                  onClick={() => setResultsTab('audit')}
+                  style={{
+                    background: resultsTab === 'audit' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.02)',
+                    color: '#fff',
+                    border: '1px solid var(--card-border)',
                     padding: '10px 20px',
-                    borderRadius: '50px',
-                    border: `1px solid ${getScoreColor(report.seo_score)}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
-                  }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', fontWeight: 700 }}>SEO SCORE</span>
-                    <strong style={{ fontSize: '1.4rem', color: getScoreColor(report.seo_score) }}>{report.seo_score}</strong>
-                  </div>
-                </div>
-
-                {/* Strengths / Weaknesses / Issues Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
-                  <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--success)' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--success)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>✓ Strengths</span>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                      {report.strengths?.map((s, idx) => <li key={idx}>{s}</li>)}
-                    </ul>
-                  </div>
-
-                  <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--error)' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--error)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>✗ Weaknesses</span>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                      {report.weaknesses?.map((w, idx) => <li key={idx}>{w}</li>)}
-                    </ul>
-                  </div>
-
-                  <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--warning)' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--warning)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>⚠️ SEO Issues</span>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                      {report.seo_issues?.map((i, idx) => <li key={idx}>{i}</li>)}
-                    </ul>
-                  </div>
-
-                  <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--info)' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--info)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>🔍 Missing Information</span>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                      {report.missing_information?.map((m, idx) => <li key={idx}>{m}</li>)}
-                    </ul>
-                  </div>
-                </div>
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  📊 SEO Audit & Recommendations
+                </button>
+                {(improving || pipelineStatus !== 'Pending') && (
+                  <button
+                    type="button"
+                    className={`tab-btn ${resultsTab === 'pipeline' ? 'active' : ''}`}
+                    onClick={() => setResultsTab('pipeline')}
+                    style={{
+                      background: resultsTab === 'pipeline' ? 'var(--success)' : 'rgba(255, 255, 255, 0.02)',
+                      color: '#fff',
+                      border: '1px solid var(--card-border)',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    🤖 AI Writer Generation Pipeline {pipelineStatus === 'Running' ? '●' : ''}
+                  </button>
+                )}
               </div>
 
-              {/* Sidebar and Action Recommendations Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
-                
-                {/* Original Content Evaluation Gaps Card */}
-                <div className="card" style={{ margin: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '16px', marginBottom: '20px' }}>
-                    <div>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--info)' }}>🔧 Recommendations</h3>
-                    </div>
-                    {!improving && (
-                      <button
-                        onClick={handleImproveArticle}
-                        className="btn btn-primary"
-                        style={{ background: 'var(--success)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', padding: '8px 16px', fontSize: '0.85rem' }}
-                      >
-                        ✨ Improve Article
-                      </button>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Title Analysis</h4>
-                      <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.5' }}>{report.title_analysis}</p>
-                    </div>
-
-                    <div>
-                      <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Search Intent</h4>
-                      <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.5' }}>{report.search_intent_match}</p>
-                    </div>
-
-                    <div>
-                      <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Missing Keywords</h4>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {report.missing_keywords.map((kw, idx) => (
-                          <span key={idx} className="badge badge-warning" style={{ textTransform: 'none', padding: '4px 8px', fontSize: '0.8rem' }}>{kw}</span>
-                        ))}
+              {resultsTab === 'audit' ? (
+                /* Tab 1: SEO Audit Report */
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }} className="optimize-results-grid">
+                  {/* Top Row: Original Content Evaluation Analysis */}
+                  <div className="card" style={{ margin: 0, borderLeft: `6px solid ${getScoreColor(report.seo_score)}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '20px' }}>
+                      <div>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>SEO Evaluation & Original Analysis</h2>
+                        <p style={{ color: 'var(--gray-muted)', margin: '4px 0 0 0', fontSize: '0.9rem' }}>Comparative evaluation of the original article draft.</p>
+                      </div>
+                      <div style={{
+                        background: 'rgba(0,0,0,0.25)',
+                        padding: '10px 20px',
+                        borderRadius: '50px',
+                        border: `1px solid ${getScoreColor(report.seo_score)}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                      }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', fontWeight: 700 }}>SEO SCORE</span>
+                        <strong style={{ fontSize: '1.4rem', color: getScoreColor(report.seo_score) }}>{report.seo_score}</strong>
                       </div>
                     </div>
 
-                    <div>
-                      <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Recommended Headings</h4>
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                        {report.recommended_headings.map((heading, idx) => <li key={idx} style={{ marginBottom: '4px' }}>H2: {heading}</li>)}
-                      </ul>
+                    {/* Strengths / Weaknesses / Issues Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '20px' }}>
+                      <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--success)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--success)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>✓ Strengths</span>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          {report.strengths?.map((s, idx) => <li key={idx}>{s}</li>)}
+                        </ul>
+                      </div>
+
+                      <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--error)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--error)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>✗ Weaknesses</span>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          {report.weaknesses?.map((w, idx) => <li key={idx}>{w}</li>)}
+                        </ul>
+                      </div>
+
+                      <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--warning)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--warning)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>⚠️ SEO Issues</span>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          {report.seo_issues?.map((i, idx) => <li key={idx}>{i}</li>)}
+                        </ul>
+                      </div>
+
+                      <div className="section-box" style={{ margin: 0, borderTop: '2px solid var(--info)' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--info)', textTransform: 'uppercase', fontWeight: 800, display: 'block', marginBottom: '8px' }}>🔍 Missing Information</span>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                          {report.missing_information?.map((m, idx) => <li key={idx}>{m}</li>)}
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* AI Optimized Version Section */}
-                {improving && (
-                  <div className="card" style={{ margin: 0, borderLeft: '4px solid var(--success)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '16px', marginBottom: '20px' }}>
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--success)' }}>🤖 AI Optimized Version</h3>
-                      {(pipelineStatus === 'Running' || pipelineStatus === 'Pending') && (
-                        <button
-                          onClick={handleStopImprovement}
-                          disabled={stopping}
-                          className="btn"
-                          style={{ background: 'var(--error)', color: '#fff', border: 'none', padding: '4px 10px', fontSize: '0.75rem', cursor: 'pointer', boxShadow: 'none' }}
-                        >
-                          {stopping ? 'Stopping...' : 'Stop'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Progress tracking */}
-                    {(pipelineStatus === 'Running' || pipelineStatus === 'Pending' || pipelineStatus === 'Cancelled') && (
-                      <div style={{ marginBottom: '20px', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid var(--card-border)' }}>
-                        {pipelineStatus === 'Cancelled' ? (
-                          <span style={{ color: 'var(--error)', fontWeight: 600, fontSize: '0.9rem' }}>⊘ Generation cancelled by user.</span>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--primary)', marginBottom: '4px' }}>● Generation progress:</span>
-                            {['research', 'writer', 'fact-check', 'style'].map(st => {
-                              const sInfo = getStageStatus(st);
-                              let col = 'var(--gray-muted)';
-                              if (sInfo.status === 'completed') col = 'var(--success)';
-                              if (sInfo.status === 'warning') col = 'var(--warning)';
-                              if (sInfo.status === 'failed') col = 'var(--error)';
-                              if (sInfo.status === 'running') col = 'var(--primary)';
-                              return <span key={st} style={{ color: col }}>{sInfo.text || `○ ${st}`}</span>;
-                            })}
-                          </div>
+                  {/* Sidebar and Action Recommendations Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
+                    {/* Original Content Evaluation Gaps Card */}
+                    <div className="card" style={{ margin: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '16px', marginBottom: '20px' }}>
+                        <div>
+                          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--info)' }}>🔧 Recommendations</h3>
+                        </div>
+                        {!improving && (
+                          <button
+                            type="button"
+                            onClick={handleImproveArticle}
+                            className="btn btn-primary"
+                            style={{ background: 'var(--success)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', padding: '8px 16px', fontSize: '0.85rem' }}
+                          >
+                            ✨ Improve Article
+                          </button>
                         )}
                       </div>
-                    )}
 
-                    {optimizedDraft ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div>
-                          <h4 style={{ fontSize: '1.15rem', color: 'var(--success)', fontWeight: 800 }}>{optimizedDraft.title}</h4>
-                          <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--gray-muted)', marginTop: '6px' }}>{optimizedDraft.introduction}</p>
+                          <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Title Analysis</h4>
+                          <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.5' }}>{report.title_analysis}</p>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {optimizedDraft.sections?.map((sec: any, idx: number) => (
-                            <div key={idx} className="section-box" style={{ margin: 0, padding: '10px 14px', background: 'rgba(255,255,255,0.01)' }}>
-                              <h5 style={{ color: 'var(--primary)', fontSize: '0.95rem', fontWeight: 700 }}>{sec.heading}</h5>
-                              <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: 'var(--foreground)', marginTop: '4px' }}>{sec.content}</p>
-                            </div>
-                          ))}
+                        <div>
+                          <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Search Intent</h4>
+                          <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: '1.5' }}>{report.search_intent_match}</p>
                         </div>
 
-                        <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{optimizedDraft.conclusion}</p>
+                        <div>
+                          <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 700 }}>
+                            Missing Keywords Priority List
+                          </h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {report.missing_keywords && report.missing_keywords.length > 0 ? (
+                              report.missing_keywords.map((kwObj: any, idx) => {
+                                const isObj = kwObj && typeof kwObj === 'object';
+                                const kwText = isObj ? kwObj.keyword : kwObj;
+                                const growth = isObj ? kwObj.trendGrowth : '+120%';
+                                const priority = isObj ? kwObj.priority : 'Medium';
+                                
+                                const badgeClass = priority === 'High' 
+                                  ? 'badge-error' 
+                                  : (priority === 'Medium' ? 'badge-warning' : 'badge-info');
 
-                        {/* Reading Time displays */}
-                        {readingTime && (
-                          <div style={{
-                            background: 'rgba(255, 255, 255, 0.03)',
-                            border: '1px solid var(--card-border)',
-                            borderRadius: '8px',
-                            padding: '12px',
-                            marginTop: '10px',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '10px',
-                            textAlign: 'center'
-                          }}>
-                            <div>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Word Count</span>
-                              <strong style={{ fontSize: '0.95rem' }}>{readingTime.word_count} words</strong>
-                            </div>
-                            <div>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Reading Time</span>
-                              <strong style={{ fontSize: '0.95rem' }}>{readingTime.reading_time_minutes}m {readingTime.reading_time_seconds}s</strong>
-                            </div>
+                                return (
+                                  <div key={idx} style={{
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    border: '1px solid var(--card-border)',
+                                    borderRadius: '6px',
+                                    padding: '8px 12px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    <span>{idx + 1}. <strong>{kwText}</strong></span>
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)' }}>{growth}</span>
+                                      <span className={`badge ${badgeClass}`} style={{ fontSize: '0.7rem', padding: '2px 6px', textTransform: 'uppercase', fontWeight: 800 }}>
+                                        {priority}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span style={{ color: 'var(--gray-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No missing keywords identified.</span>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ) : (
-                      pipelineStatus !== 'Cancelled' && (
-                        <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)', fontSize: '0.9rem' }}>
-                          Waiting for writing agent to generate improved content...
-                        </p>
-                      )
-                    )}
-                  </div>
-                )}
+                        </div>
 
-              </div>
+                        <div>
+                          <h4 style={{ fontSize: '0.85rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Recommended Headings</h4>
+                          <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.9rem', lineHeight: '1.5' }}>
+                            {report.recommended_headings.map((heading, idx) => <li key={idx} style={{ marginBottom: '4px' }}>H2: {heading}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Tab 2: AI Writer Generation Pipeline (Mirrors the Timeline layout!) */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* Inline stylesheet for print layout */}
+                  <style dangerouslySetInnerHTML={{ __html: `
+                    @media print {
+                      header, nav, .navbar, .header, .flow-status-banner, .tabs-sidebar, .final-evaluation-card, .export-actions, .timeline-card, .card, .container > *:not(.tabs-layout), .optimize-results-container > *:not(.tab-panel) {
+                        display: none !important;
+                      }
+                      .container {
+                        max-width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                      }
+                      .tabs-layout {
+                        display: block !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                      }
+                      .tab-panel {
+                        width: 100% !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                      }
+                      .final-product-grid {
+                        display: block !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                      }
+                      .final-article-card {
+                        width: 100% !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        background: transparent !important;
+                      }
+                      .final-article-card * {
+                        color: #000000 !important;
+                      }
+                      .final-article-card .btn, .final-article-card .export-actions, .export-actions {
+                        display: none !important;
+                      }
+                    }
+                  `}} />
+
+                  {/* Top Status Banner */}
+                  {(() => {
+                    const getGenerationStatus = (): 'idle' | 'running' | 'completed' | 'cancelled' | 'failed' => {
+                      if (pipelineStatus === 'Pending' || pipelineStatus === 'Running') return 'running';
+                      if (pipelineStatus === 'Completed') return 'completed';
+                      if (pipelineStatus === 'Cancelled') return 'cancelled';
+                      if (pipelineStatus === 'Failed') return 'failed';
+                      return 'idle';
+                    };
+                    const generationStatus = getGenerationStatus();
+
+                    if (generationStatus === 'running') {
+                      return (
+                        <div className="flow-status-banner info" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                          <span>● Pipeline executing in real-time...</span>
+                          <button
+                            type="button"
+                            onClick={handleStopImprovement}
+                            disabled={stopping}
+                            className="btn"
+                            style={{ background: 'var(--error)', color: '#fff', border: 'none', padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer', boxShadow: 'none' }}
+                          >
+                            {stopping ? 'Stopping...' : 'Stop Generation'}
+                          </button>
+                        </div>
+                      );
+                    }
+                    if (generationStatus === 'cancelled') {
+                      return (
+                        <div className="flow-status-banner error" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          ⊘ Generation cancelled by user.
+                        </div>
+                      );
+                    }
+                    if (generationStatus === 'failed') {
+                      return (
+                        <div className="flow-status-banner error" style={{ background: 'var(--error-bg)', color: 'var(--error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          ⚠️ Generation failed. Please check the logs.
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="flow-status-banner success">
+                        ✨ Successful Flow: The article was successfully optimized and polished.
+                      </div>
+                    );
+                  })()}
+
+                  {/* Sequential Progress Tracker Card */}
+                  <div className="card" style={{ margin: 0, padding: '24px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
+                      Pipeline Progress Tracking
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                      {['research', 'writer', 'fact-check', 'style'].map((stKey) => {
+                        const info = getStageStatus(stKey);
+                        let color = 'var(--gray-muted)';
+                        let isPulse = false;
+                        let isStrikethrough = false;
+
+                        if (info.status === 'completed') color = 'var(--success)';
+                        if (info.status === 'warning') color = 'var(--warning)';
+                        if (info.status === 'failed') color = 'var(--error)';
+                        if (info.status === 'running') {
+                          color = 'var(--primary)';
+                          isPulse = true;
+                        }
+                        if (info.status === 'skipped') {
+                          color = 'var(--gray-muted)';
+                          isStrikethrough = true;
+                        }
+
+                        const labelText = stKey === 'research' ? 'Researching sources' : (stKey === 'writer' ? 'Writing article' : (stKey === 'fact-check' ? 'Quality checking / verification' : 'Finalizing style & tone'));
+
+                        return (
+                          <div
+                            key={stKey}
+                            className={`progress-step-indicator ${isPulse ? 'pulse' : ''}`}
+                            style={{
+                              borderLeft: `3px solid ${color}`,
+                              color: color,
+                              textDecoration: isStrikethrough ? 'line-through' : 'none'
+                            }}
+                          >
+                            <style dangerouslySetInnerHTML={{ __html: `
+                              @keyframes pulseBorder {
+                                0% { opacity: 0.6; }
+                                50% { opacity: 1; }
+                                100% { opacity: 0.6; }
+                              }
+                              .progress-step-indicator {
+                                background: rgba(255, 255, 255, 0.01);
+                                border: 1px solid var(--card-border);
+                                padding: 12px 14px;
+                                borderRadius: 8px;
+                                fontSize: 0.85rem;
+                                fontWeight: 600;
+                              }
+                              .progress-step-indicator.pulse {
+                                animation: pulseBorder 1.5s infinite;
+                                background: rgba(99, 102, 241, 0.03);
+                              }
+                            `}} />
+                            {info.text || `○ ${labelText}`}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* View Mode Toggle Controls */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginTop: '10px' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--card-border)',
+                      padding: '4px',
+                      borderRadius: '8px',
+                      gap: '4px'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('tabs')}
+                        style={{
+                          background: viewMode === 'tabs' ? 'var(--primary)' : 'transparent',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        🏆 Tabbed Step-by-Step
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('timeline')}
+                        style={{
+                          background: viewMode === 'timeline' ? 'var(--primary)' : 'transparent',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        📜 Continuous Timeline
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Timeline/Tabbed Details logs view */}
+                  {(() => {
+                    const filterLogs = improvementLogs.filter(l => l.agent_name !== 'pipeline_status');
+                    const stylePolisherLog = filterLogs.find((l) => l.agent_name === 'style-polisher');
+                    const rubricGraderLog = filterLogs.find((l) => l.agent_name === 'rubric-grader');
+
+                    let finalArticlePayload: Record<string, any> | null = null;
+                    if (stylePolisherLog && stylePolisherLog.output) {
+                      const parsedOut = parsePayload(stylePolisherLog.output);
+                      const polished = (parsedOut.polishedDraft || (parsedOut.title ? parsedOut : null)) as Record<string, any> | undefined;
+                      if (polished) {
+                        finalArticlePayload = polished;
+                      }
+                    }
+                    if (!finalArticlePayload) {
+                      const writerLogs = filterLogs.filter(
+                        (l) => l.agent_name.startsWith('writer_agent_attempt') || l.agent_name.startsWith('writer_agent_revision')
+                      );
+                      if (writerLogs.length > 0) {
+                        const lastWriter = writerLogs[writerLogs.length - 1];
+                        finalArticlePayload = parsePayload(lastWriter.output);
+                      }
+                    }
+
+                    let rubricPayload: Record<string, any> | null = null;
+                    if (rubricGraderLog && rubricGraderLog.output) {
+                      rubricPayload = parsePayload(rubricGraderLog.output);
+                    }
+
+                    const readingTimeStats = getReadingTime(finalArticlePayload);
+
+                    if (viewMode === 'tabs') {
+                      return (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '240px 1fr',
+                          gap: '24px',
+                          alignItems: 'start'
+                        }} className="tabs-layout">
+                          
+                          {/* Sidebar navigation */}
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            background: 'rgba(255,255,255,0.01)',
+                            border: '1px solid var(--card-border)',
+                            borderRadius: '12px',
+                            padding: '12px'
+                          }} className="tabs-sidebar">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTabId('final-product')}
+                              style={{
+                                background: activeTabId === 'final-product' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                                border: activeTabId === 'final-product' ? '1px solid var(--primary)' : '1px solid transparent',
+                                color: activeTabId === 'final-product' ? 'var(--primary)' : 'var(--gray-muted)',
+                                padding: '10px 14px',
+                                borderRadius: '8px',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: '0.85rem'
+                              }}
+                            >
+                              🏆 Final Product & Grade
+                            </button>
+                            {filterLogs.map((log, idx) => {
+                              const output = parsePayload(log.output);
+                              const config = getAgentConfig(log.agent_name, output);
+                              return (
+                                <button
+                                  key={log.id}
+                                  type="button"
+                                  onClick={() => setActiveTabId(log.id)}
+                                  style={{
+                                    background: activeTabId === log.id ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                                    border: activeTabId === log.id ? '1px solid var(--primary)' : '1px solid transparent',
+                                    color: activeTabId === log.id ? 'var(--primary)' : 'var(--gray-muted)',
+                                    padding: '10px 14px',
+                                    borderRadius: '8px',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    fontWeight: 700,
+                                    fontSize: '0.85rem'
+                                  }}
+                                >
+                                  {`${idx + 1}. ${config.title}`}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Tab Content Panel */}
+                          <div className="tab-panel">
+                            {activeTabId === 'final-product' ? (
+                              <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 300px',
+                                gap: '24px',
+                                alignItems: 'start'
+                              }} className="final-product-grid">
+                                
+                                {/* Left: Polished Article Card */}
+                                <div className="card final-article-card" style={{ margin: 0 }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }} className="export-actions">
+                                    <div>
+                                      <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--success)' }}>🤖 AI Optimized Version</h3>
+                                      <p style={{ color: 'var(--gray-muted)', fontSize: '0.85rem', margin: '4px 0 0 0' }}>Final fact-checked and polished output.</p>
+                                    </div>
+                                    {finalArticlePayload && (
+                                      <button
+                                        type="button"
+                                        onClick={() => window.print()}
+                                        className="btn btn-primary"
+                                        style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                                      >
+                                        📄 Export to PDF
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {finalArticlePayload ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                      <div>
+                                        <h4 style={{ fontSize: '1.25rem', color: 'var(--success)', fontWeight: 800 }}>{finalArticlePayload.title}</h4>
+                                        {readingTimeStats && (
+                                          <div style={{
+                                            color: 'var(--gray-muted)',
+                                            fontSize: '0.8rem',
+                                            marginTop: '6px',
+                                            marginBottom: '8px',
+                                            display: 'flex',
+                                            gap: '12px',
+                                            flexWrap: 'wrap',
+                                            fontFamily: 'var(--font-mono)'
+                                          }}>
+                                            <span>{readingTimeStats.word_count} words</span>
+                                            <span>•</span>
+                                            <span>{readingTimeStats.reading_time_minutes} min read</span>
+                                            <span>•</span>
+                                            <span>Average reading speed: 225 wpm</span>
+                                          </div>
+                                        )}
+                                        <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--gray-muted)', marginTop: '6px' }}>{finalArticlePayload.introduction}</p>
+                                      </div>
+
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {finalArticlePayload.sections?.map((sec: any, idx: number) => (
+                                          <div key={idx} className="section-box" style={{ margin: 0, padding: '10px 14px', background: 'rgba(255,255,255,0.01)' }}>
+                                            <h5 style={{ color: 'var(--primary)', fontSize: '0.95rem', fontWeight: 700 }}>{sec.heading}</h5>
+                                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: 'var(--foreground)', marginTop: '4px' }}>{sec.content}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+
+                                      <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{finalArticlePayload.conclusion}</p>
+                                    </div>
+                                  ) : (
+                                    pipelineStatus !== 'Cancelled' && pipelineStatus !== 'Failed' && (
+                                      <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)', fontSize: '0.85rem' }}>
+                                        Waiting for writing agent to generate content...
+                                      </p>
+                                    )
+                                  )}
+                                </div>
+
+                                {/* Right: Rubric Grade Card */}
+                                <div className="card final-evaluation-card" style={{ margin: 0 }}>
+                                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: 'var(--info)' }}>📊 Final Evaluation</h3>
+                                  <p style={{ color: 'var(--gray-muted)', fontSize: '0.8rem', margin: '4px 0 16px 0' }}>Quality grading feedback from the Grader Agent.</p>
+
+                                  {rubricPayload ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        <div className="section-box" style={{ textAlign: 'center', margin: 0, padding: '8px 0', borderTop: '2px solid var(--primary)' }}>
+                                          <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Clarity</span>
+                                          <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>{String(rubricPayload.clarity || '0')}/5</strong>
+                                        </div>
+                                        <div className="section-box" style={{ textAlign: 'center', margin: 0, padding: '8px 0', borderTop: '2px solid var(--success)' }}>
+                                          <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Accuracy</span>
+                                          <strong style={{ fontSize: '1.25rem', color: 'var(--success)' }}>{String(rubricPayload.accuracy || '0')}/5</strong>
+                                        </div>
+                                        <div className="section-box" style={{ textAlign: 'center', margin: 0, padding: '8px 0', borderTop: '2px solid var(--warning)' }}>
+                                          <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Completeness</span>
+                                          <strong style={{ fontSize: '1.25rem', color: 'var(--warning)' }}>{String(rubricPayload.completeness || '0')}/5</strong>
+                                        </div>
+                                        <div className="section-box" style={{ textAlign: 'center', margin: 0, padding: '8px 0', borderTop: '2px solid var(--info)', background: 'rgba(99,102,241,0.05)' }}>
+                                          <span style={{ fontSize: '0.7rem', color: 'var(--gray-muted)', display: 'block' }}>Overall</span>
+                                          <strong style={{ fontSize: '1.25rem', color: 'var(--info)' }}>{String(rubricPayload.overall_score || '0')}/5</strong>
+                                        </div>
+                                      </div>
+                                      
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--gray-muted)', textTransform: 'uppercase' }}>Grader Feedback</span>
+                                        <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: 'var(--foreground)', marginTop: '4px', background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '6px', lineHeight: '1.5' }}>
+                                          {String(rubricPayload.feedback || '')}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p style={{ fontStyle: 'italic', color: 'var(--gray-muted)', fontSize: '0.85rem' }}>Evaluation not available yet.</p>
+                                  )}
+                                </div>
+
+                              </div>
+                            ) : (
+                              /* Specific Agent Tab Logs */
+                              filterLogs.filter(l => l.id === activeTabId).map((log) => {
+                                const input = parsePayload(log.input);
+                                const output = parsePayload(log.output);
+                                const config = getAgentConfig(log.agent_name, output);
+
+                                return (
+                                  <div key={log.id} className="card timeline-card" style={{ margin: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '12px', marginBottom: '14px' }}>
+                                      <div>
+                                        <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--foreground)' }}>{config.title}</span>
+                                        <span className={`badge ${config.badge}`} style={{ marginLeft: '8px', fontSize: '0.7rem', padding: '2px 6px' }}>{config.statusText}</span>
+                                      </div>
+                                      <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)' }}>⏱️ {log.latency_ms} ms {log.token_count ? `| 🪙 ${log.token_count} tokens` : ''}</span>
+                                    </div>
+
+                                    {/* Agent Content renders */}
+                                    {log.agent_name === 'research' && !output.error && (
+                                      <div>
+                                        <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', lineHeight: '1.5' }}>{String(output.summary || '')}</p>
+                                        {Array.isArray(output.sources) && output.sources.length > 0 && (
+                                          <div style={{ marginTop: '12px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Sources</span>
+                                            {output.sources.map((src: any, sIdx: number) => (
+                                              <a key={sIdx} href={src.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'underline', marginBottom: '4px' }}>
+                                                🔗 {src.title || src.url}
+                                              </a>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {(log.agent_name.startsWith('writer_agent') || log.agent_name === 'style-polisher') && !output.error && (
+                                      <div>
+                                        {log.agent_name === 'style-polisher' ? (
+                                          (() => {
+                                            const polished = output.polishedDraft || (output.title ? output : null);
+                                            if (!polished) return null;
+                                            return (
+                                              <div>
+                                                <h4 style={{ color: 'var(--success)', fontWeight: 700 }}>{polished.title}</h4>
+                                                <p style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--gray-muted)' }}>{polished.introduction}</p>
+                                                {polished.sections?.map((s: any, sIdx: number) => (
+                                                  <div key={sIdx} style={{ marginTop: '10px' }}>
+                                                    <h5 style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{s.heading}</h5>
+                                                    <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>{s.content}</p>
+                                                  </div>
+                                                ))}
+                                                <p style={{ fontWeight: 600, fontSize: '0.85rem', marginTop: '10px' }}>{polished.conclusion}</p>
+                                              </div>
+                                            );
+                                          })()
+                                        ) : (
+                                          <div>
+                                            <h4 style={{ fontWeight: 700 }}>{output.title}</h4>
+                                            <p style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--gray-muted)' }}>{output.introduction}</p>
+                                            {output.sections?.map((s: any, sIdx: number) => (
+                                              <div key={sIdx} style={{ marginTop: '10px' }}>
+                                                <h5 style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{s.heading}</h5>
+                                                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>{s.content}</p>
+                                              </div>
+                                            ))}
+                                            <p style={{ fontWeight: 600, fontSize: '0.85rem', marginTop: '10px' }}>{output.conclusion}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {log.agent_name.startsWith('fact_checker') && !output.error && (
+                                      <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                          <span style={{ fontSize: '0.85rem' }}>Passed Verification:</span>
+                                          <span className={`badge ${output.passed ? 'badge-success' : 'badge-error'}`} style={{ fontSize: '0.75rem' }}>
+                                            {output.passed ? 'Yes' : 'No'}
+                                          </span>
+                                        </div>
+                                        {!output.passed && Array.isArray(output.unsupported_claims) && (
+                                          <div style={{ marginBottom: '10px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--error)', textTransform: 'uppercase', display: 'block' }}>Claims to Correct</span>
+                                            {output.unsupported_claims.map((claim: string, cIdx: number) => (
+                                              <div key={cIdx} style={{ padding: '6px', background: 'rgba(239, 68, 68, 0.05)', borderLeft: '3px solid var(--error)', fontSize: '0.8rem', marginTop: '4px' }}>
+                                                {claim}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {output.feedback && (
+                                          <div>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase' }}>Revision Feedback</span>
+                                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem', background: 'rgba(0,0,0,0.1)', padding: '8px', borderRadius: '6px', marginTop: '4px' }}>
+                                              {output.feedback}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {log.agent_name === 'rubric-grader' && !output.error && (
+                                      <div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                                          <div>
+                                            <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--gray-muted)' }}>Clarity</span>
+                                            <strong style={{ fontSize: '1.1rem' }}>{output.clarity}/5</strong>
+                                          </div>
+                                          <div>
+                                            <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--gray-muted)' }}>Accuracy</span>
+                                            <strong style={{ fontSize: '1.1rem' }}>{output.accuracy}/5</strong>
+                                          </div>
+                                          <div>
+                                            <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--gray-muted)' }}>Completeness</span>
+                                            <strong style={{ fontSize: '1.1rem' }}>{output.completeness}/5</strong>
+                                          </div>
+                                          <div>
+                                            <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--gray-muted)' }}>Overall</span>
+                                            <strong style={{ fontSize: '1.1rem' }}>{output.overall_score}/5</strong>
+                                          </div>
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase' }}>Grading Feedback</span>
+                                        <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem', background: 'rgba(0,0,0,0.1)', padding: '8px', borderRadius: '6px', marginTop: '4px' }}>
+                                          {output.feedback}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Raw JSON Accordion */}
+                                    <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
+                                      <details>
+                                        <summary style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', cursor: 'pointer' }}>View Raw JSON</summary>
+                                        <pre style={{ fontSize: '0.75rem', background: '#0a0a0a', padding: '8px', borderRadius: '4px', overflowX: 'auto', marginTop: '6px' }}>
+                                          {JSON.stringify({ input, output }, null, 2)}
+                                        </pre>
+                                      </details>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      /* Continuous Timeline View */
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          {filterLogs.map((log) => {
+                            const input = parsePayload(log.input);
+                            const output = parsePayload(log.output);
+                            const config = getAgentConfig(log.agent_name, output);
+
+                            return (
+                              <div key={log.id} className="card timeline-card" style={{ margin: 0 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--card-border)', paddingBottom: '12px', marginBottom: '14px' }}>
+                                  <div>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--foreground)' }}>{config.title}</span>
+                                    <span className={`badge ${config.badge}`} style={{ marginLeft: '8px', fontSize: '0.7rem', padding: '2px 6px' }}>{config.statusText}</span>
+                                  </div>
+                                  <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)' }}>⏱️ {log.latency_ms} ms {log.token_count ? `| 🪙 ${log.token_count} tokens` : ''}</span>
+                                </div>
+
+                                {/* Render logic exact copy */}
+                                {log.agent_name === 'research' && !output.error && (
+                                  <div>
+                                    <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', lineHeight: '1.5' }}>{String(output.summary || '')}</p>
+                                    {Array.isArray(output.sources) && output.sources.length > 0 && (
+                                      <div style={{ marginTop: '12px' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Sources</span>
+                                        {output.sources.map((src: any, sIdx: number) => (
+                                          <a key={sIdx} href={src.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'underline', marginBottom: '4px' }}>
+                                            🔗 {src.title || src.url}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {(log.agent_name.startsWith('writer_agent') || log.agent_name === 'style-polisher') && !output.error && (
+                                  <div>
+                                    {log.agent_name === 'style-polisher' ? (
+                                      (() => {
+                                        const polished = output.polishedDraft || (output.title ? output : null);
+                                        if (!polished) return null;
+                                        return (
+                                          <div>
+                                            <h4 style={{ color: 'var(--success)', fontWeight: 700 }}>{polished.title}</h4>
+                                            <p style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--gray-muted)' }}>{polished.introduction}</p>
+                                            {polished.sections?.map((s: any, sIdx: number) => (
+                                              <div key={sIdx} style={{ marginTop: '10px' }}>
+                                                <h5 style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{s.heading}</h5>
+                                                <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>{s.content}</p>
+                                              </div>
+                                            ))}
+                                            <p style={{ fontWeight: 600, fontSize: '0.85rem', marginTop: '10px' }}>{polished.conclusion}</p>
+                                          </div>
+                                        );
+                                      })()
+                                    ) : (
+                                      <div>
+                                        <h4 style={{ fontWeight: 700 }}>{output.title}</h4>
+                                        <p style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--gray-muted)' }}>{output.introduction}</p>
+                                        {output.sections?.map((s: any, sIdx: number) => (
+                                          <div key={sIdx} style={{ marginTop: '10px' }}>
+                                            <h5 style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{s.heading}</h5>
+                                            <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem' }}>{s.content}</p>
+                                          </div>
+                                        ))}
+                                        <p style={{ fontWeight: 600, fontSize: '0.85rem', marginTop: '10px' }}>{output.conclusion}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {log.agent_name.startsWith('fact_checker') && !output.error && (
+                                  <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                      <span style={{ fontSize: '0.85rem' }}>Passed Verification:</span>
+                                      <span className={`badge ${output.passed ? 'badge-success' : 'badge-error'}`} style={{ fontSize: '0.75rem' }}>
+                                        {output.passed ? 'Yes' : 'No'}
+                                      </span>
+                                    </div>
+                                    {!output.passed && Array.isArray(output.unsupported_claims) && (
+                                      <div style={{ marginBottom: '10px' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--error)', textTransform: 'uppercase', display: 'block' }}>Claims to Correct</span>
+                                        {output.unsupported_claims.map((claim: string, cIdx: number) => (
+                                          <div key={cIdx} style={{ padding: '6px', background: 'rgba(239, 68, 68, 0.05)', borderLeft: '3px solid var(--error)', fontSize: '0.8rem', marginTop: '4px' }}>
+                                            {claim}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {output.feedback && (
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase' }}>Revision Feedback</span>
+                                        <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem', background: 'rgba(0,0,0,0.1)', padding: '8px', borderRadius: '6px', marginTop: '4px' }}>
+                                          {output.feedback}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {log.agent_name === 'rubric-grader' && !output.error && (
+                                  <div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                                      <div>
+                                        <span style={{ fontSize: '0.7rem', display: 'block', color: 'var(--gray-muted)' }}>Clarity</span>
+                                        <strong style={{ fontSize: '1.1rem' }}>{output.clarity}/5</strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', display: 'block', color: 'var(--gray-muted)' }}>Accuracy</span>
+                                        <strong style={{ fontSize: '1.1rem' }}>{output.accuracy}/5</strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', display: 'block', color: 'var(--gray-muted)' }}>Completeness</span>
+                                        <strong style={{ fontSize: '1.1rem' }}>{output.completeness}/5</strong>
+                                      </div>
+                                      <div>
+                                        <span style={{ fontSize: '0.75rem', display: 'block', color: 'var(--gray-muted)' }}>Overall</span>
+                                        <strong style={{ fontSize: '1.1rem' }}>{output.overall_score}/5</strong>
+                                      </div>
+                                    </div>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', textTransform: 'uppercase' }}>Grading Feedback</span>
+                                    <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.8rem', background: 'rgba(0,0,0,0.1)', padding: '8px', borderRadius: '6px', marginTop: '4px' }}>
+                                      {output.feedback}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Raw JSON Accordion */}
+                                <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: '10px' }}>
+                                  <details>
+                                    <summary style={{ fontSize: '0.75rem', color: 'var(--gray-muted)', cursor: 'pointer' }}>View Raw JSON</summary>
+                                    <pre style={{ fontSize: '0.75rem', background: '#0a0a0a', padding: '8px', borderRadius: '4px', overflowX: 'auto', marginTop: '6px' }}>
+                                      {JSON.stringify({ input, output }, null, 2)}
+                                    </pre>
+                                  </details>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -19,6 +19,15 @@ export default function GeneratePage() {
   const [seoRecs, setSeoRecs] = useState<{ keyword: string; recommendations: SeoRecommendations } | null>(null);
   const router = useRouter();
 
+  // Dynamic document title update
+  useEffect(() => {
+    if (seoRecs?.keyword) {
+      document.title = `Generate Article: ${seoRecs.keyword}`;
+    } else {
+      document.title = `Generate Article`;
+    }
+  }, [seoRecs]);
+
   useEffect(() => {
     const stored = localStorage.getItem('seo_recommendations');
     if (stored) {

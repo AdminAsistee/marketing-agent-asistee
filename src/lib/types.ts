@@ -100,10 +100,25 @@ export interface RubricGraderOutput {
   feedback: string;
 }
 
+export interface RelatedQuery {
+  ranking: number;
+  query: string;
+  searchGrowth: string;
+  estimatedInterest: 'High' | 'Medium' | 'Low';
+}
+
+export interface RisingQuery {
+  ranking: number;
+  query: string;
+  trendIncrease: string;
+  estimatedInterest?: string;
+  opportunityScore: number;
+}
+
 export interface TrendData {
   keyword: string;
-  relatedQueries: string[];
-  risingQueries: string[];
+  relatedQueries: RelatedQuery[];
+  risingQueries: RisingQuery[];
   trendSummary: string;
 }
 
@@ -124,11 +139,17 @@ export interface SeoRecommendations {
   keywordSuggestions: KeywordSuggestion[];
 }
 
+export interface OptimizedKeyword {
+  keyword: string;
+  trendGrowth: string;
+  priority: 'High' | 'Medium' | 'Low';
+}
+
 export interface SeoOptimizationReport {
   title_analysis: string;
   seo_score: string;
   search_intent_match: string;
-  missing_keywords: string[];
+  missing_keywords: OptimizedKeyword[];
   content_gaps: string[];
   recommended_headings: string[];
   readability_feedback: string;

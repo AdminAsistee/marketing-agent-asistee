@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: keyword.trim(), feature: 'SEO Analysis' },
+      input: { title: keyword.trim(), feature: 'SEO Intelligence', keyword: keyword.trim(), websiteContext },
       output: { status: 'Running' },
       latency_ms: 0
     });
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: keyword.trim(), feature: 'SEO Analysis' },
+      input: { title: keyword.trim(), feature: 'SEO Intelligence', keyword: keyword.trim(), websiteContext },
       output: { status: 'Completed', result: { trendData, recommendations } },
       latency_ms: Date.now() - startTime
     });
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: keyword ? keyword.trim() : 'SEO Search', feature: 'SEO Analysis' },
+      input: { title: keyword ? keyword.trim() : 'SEO Search', feature: 'SEO Intelligence', keyword: keyword || '', websiteContext: '' },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });

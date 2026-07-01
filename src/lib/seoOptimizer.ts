@@ -19,7 +19,15 @@ const seoOptimizerResponseSchema = {
     },
     missing_keywords: {
       type: 'ARRAY',
-      items: { type: 'STRING' },
+      items: {
+        type: 'OBJECT',
+        properties: {
+          keyword: { type: 'STRING', description: 'The missing keyword/search term' },
+          trendGrowth: { type: 'STRING', description: 'Trend growth rate indicator, e.g. +150% or Breakout' },
+          priority: { type: 'STRING', enum: ['High', 'Medium', 'Low'], description: 'Priority level based on potential search volume' }
+        },
+        required: ['keyword', 'trendGrowth', 'priority']
+      },
       description: 'High-value search queries/keywords from trend data that are missing or underutilized.'
     },
     content_gaps: {
@@ -120,7 +128,13 @@ Provide a detailed optimization report returned as a structured JSON object matc
   "title_analysis": "string",
   "seo_score": "string",
   "search_intent_match": "string",
-  "missing_keywords": ["string"],
+  "missing_keywords": [
+    {
+      "keyword": "string",
+      "trendGrowth": "string",
+      "priority": "High" | "Medium" | "Low"
+    }
+  ],
   "content_gaps": ["string"],
   "recommended_headings": ["string"],
   "readability_feedback": "string",
@@ -135,7 +149,7 @@ Provide a detailed optimization report returned as a structured JSON object matc
 Guidelines:
 1. Compare the article's existing keywords and structure against the trend data (related search terms and rising queries).
 2. Rate the article's current SEO strength with a score out of 100 (e.g. "65/100").
-3. Identify missing keywords that should be integrated.
+3. Identify missing keywords that should be integrated, prioritized from highest to lowest search interest and relevance.
 4. Detect content gaps (unaddressed topics/questions) in the current article compared to trending search intent.
 5. Provide actionable, specific improvements and list optimized alternative titles.
 6. Provide a detailed original content evaluation including:

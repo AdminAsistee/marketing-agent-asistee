@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Originality Analysis' },
+      input: { title: topic, feature: 'Originality Analysis', inputSnippet: input.slice(0, 150), websiteContext },
       output: { status: 'Running' },
       latency_ms: 0
     });
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Originality Analysis' },
+      input: { title: topic, feature: 'Originality Analysis', inputSnippet: input.slice(0, 150), websiteContext },
       output: { status: 'Completed', result: report },
       latency_ms: Date.now() - startTime
     });
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: 'Originality Analysis' },
+      input: { title: topic, feature: 'Originality Analysis', inputSnippet: input.slice(0, 150), websiteContext: '' },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });

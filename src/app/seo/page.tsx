@@ -91,6 +91,15 @@ function SeoPageContent() {
       });
   }, [runId]);
 
+  // Dynamic document title update
+  useEffect(() => {
+    if (keyword.trim()) {
+      document.title = `SEO Intelligence: ${keyword.trim()}`;
+    } else {
+      document.title = `SEO Intelligence`;
+    }
+  }, [keyword]);
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) {
@@ -222,30 +231,95 @@ function SeoPageContent() {
                 <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Search Interest Summary</h4>
                 <p style={{ lineHeight: '1.6', marginBottom: '20px' }}>{trendData.trendSummary}</p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginTop: '16px' }}>
+                  {/* Related Queries */}
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Related Queries</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--info)', textTransform: 'uppercase', marginBottom: '14px', fontWeight: 800 }}>
+                      📊 Ranked Related Queries
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {trendData.relatedQueries.length > 0 ? (
-                        trendData.relatedQueries.map((q, idx) => (
-                          <span key={idx} className="badge badge-info" style={{ textTransform: 'none', padding: '6px 12px', fontSize: '0.85rem' }}>
-                            {q}
-                          </span>
-                        ))
+                        trendData.relatedQueries
+                          .sort((a: any, b: any) => (a.ranking || 0) - (b.ranking || 0))
+                          .map((q: any, idx) => {
+                            const isObj = q && typeof q === 'object';
+                            const ranking = isObj ? q.ranking : idx + 1;
+                            const queryText = isObj ? q.query : q;
+                            const growth = isObj ? q.searchGrowth : '+120%';
+                            const interest = isObj ? q.estimatedInterest : 'Medium';
+                            
+                            return (
+                              <div key={idx} style={{
+                                background: 'rgba(0, 0, 0, 0.15)',
+                                border: '1px solid var(--card-border)',
+                                borderRadius: '8px',
+                                padding: '12px 16px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}>
+                                <div>
+                                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)' }}>
+                                    {ranking}. {queryText}
+                                  </span>
+                                  <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--gray-muted)', marginTop: '4px' }}>
+                                    Estimated Interest: <strong style={{ color: 'var(--info)' }}>{interest}</strong>
+                                  </span>
+                                </div>
+                                <span className="badge badge-info" style={{ fontWeight: 700, fontSize: '0.8rem', padding: '4px 8px' }}>
+                                  {growth}
+                                </span>
+                              </div>
+                            );
+                          })
                       ) : (
                         <span style={{ color: 'var(--gray-muted)', fontStyle: 'italic' }}>No related queries found.</span>
                       )}
                     </div>
                   </div>
+
+                  {/* Rising Searches */}
                   <div>
-                    <h4 style={{ fontSize: '0.9rem', color: 'var(--gray-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Rising Topics / Searches</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--warning)', textTransform: 'uppercase', marginBottom: '14px', fontWeight: 800 }}>
+                      📈 Ranked Rising Searches
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {trendData.risingQueries.length > 0 ? (
-                        trendData.risingQueries.map((q, idx) => (
-                          <span key={idx} className="badge badge-warning" style={{ textTransform: 'none', padding: '6px 12px', fontSize: '0.85rem' }}>
-                            📈 {q}
-                          </span>
-                        ))
+                        trendData.risingQueries
+                          .sort((a: any, b: any) => (a.ranking || 0) - (b.ranking || 0))
+                          .map((q: any, idx) => {
+                            const isObj = q && typeof q === 'object';
+                            const ranking = isObj ? q.ranking : idx + 1;
+                            const queryText = isObj ? q.query : q;
+                            const growth = isObj ? q.trendIncrease : '+150%';
+                            const interest = isObj ? q.estimatedInterest : 'High';
+                            const oppScore = isObj ? q.opportunityScore : 85;
+
+                            return (
+                              <div key={idx} style={{
+                                background: 'rgba(0, 0, 0, 0.15)',
+                                border: '1px solid var(--card-border)',
+                                borderRadius: '8px',
+                                padding: '12px 16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px'
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)' }}>
+                                    {ranking}. {queryText}
+                                  </span>
+                                  <span className="badge badge-warning" style={{ fontWeight: 700, fontSize: '0.8rem', padding: '4px 8px' }}>
+                                    {growth}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--gray-muted)' }}>
+                                  <span>Interest: <strong style={{ color: 'var(--foreground)' }}>{interest || 'Medium'}</strong></span>
+                                  <span>Opportunity Score: <strong style={{ color: 'var(--warning)' }}>{oppScore}/100</strong></span>
+                                </div>
+                              </div>
+                            );
+                          })
                       ) : (
                         <span style={{ color: 'var(--gray-muted)', fontStyle: 'italic' }}>No rising queries found.</span>
                       )}

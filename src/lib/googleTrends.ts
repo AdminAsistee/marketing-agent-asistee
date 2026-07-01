@@ -6,12 +6,31 @@ const trendDataResponseSchema = {
   properties: {
     relatedQueries: {
       type: 'ARRAY',
-      items: { type: 'STRING' },
-      description: 'List of relevant related search terms/queries for the keyword'
+      items: {
+        type: 'OBJECT',
+        properties: {
+          ranking: { type: 'INTEGER', description: 'Ranking position, starting at 1' },
+          query: { type: 'STRING', description: 'Search term or query string' },
+          searchGrowth: { type: 'STRING', description: 'Search volume growth rate percentage e.g. +120%' },
+          estimatedInterest: { type: 'STRING', enum: ['High', 'Medium', 'Low'], description: 'Estimated volume classification' }
+        },
+        required: ['ranking', 'query', 'searchGrowth', 'estimatedInterest']
+      },
+      description: 'Ranked list of relevant related search terms/queries for the keyword'
     },
     risingQueries: {
       type: 'ARRAY',
-      items: { type: 'STRING' },
+      items: {
+        type: 'OBJECT',
+        properties: {
+          ranking: { type: 'INTEGER', description: 'Ranking position, starting at 1' },
+          query: { type: 'STRING', description: 'Search term or query string' },
+          trendIncrease: { type: 'STRING', description: 'Growth percentage or Breakout tag' },
+          estimatedInterest: { type: 'STRING', description: 'Optional estimated interest volume description' },
+          opportunityScore: { type: 'INTEGER', description: 'A calculated opportunity priority score from 1 to 100' }
+        },
+        required: ['ranking', 'query', 'trendIncrease', 'opportunityScore']
+      },
       description: 'List of rising queries or rising search terms showing recent traffic spikes'
     },
     trendSummary: {
@@ -33,7 +52,7 @@ export async function fetchTrends(keyword: string): Promise<TrendData> {
 
   try {
     const prompt = `Research current Google search trends, search interest, related search terms, and rising search queries for the keyword: "${keyword}".
-Focus on gathering live, real-time web search trend context and search interest variations.`;
+Focus on gathering live, real-time web search trend context and search interest variations. Return relatedQueries and risingQueries ranked and sorted from best to worst.`;
 
     const response = await ai.models.generateContent({
       model: AGENT_MODELS.research, // Uses gemini-3.5-flash with search tool

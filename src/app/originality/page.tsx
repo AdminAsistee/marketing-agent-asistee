@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface OriginalityReport {
@@ -12,12 +13,72 @@ interface OriginalityReport {
   exclusive_content_opportunities: string[];
 }
 
-export default function OriginalityPage() {
+function OriginalityPageContent() {
   const [input, setInput] = useState('');
   const [websiteContext, setWebsiteContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<OriginalityReport | null>(null);
+
+  const searchParams = useSearchParams();
+  const runId = searchParams.get('runId');
+
+  // Load from runId query param if present (for history reopening)
+  useEffect(() => {
+    if (!runId) return;
+
+    setLoading(true);
+    setError(null);
+    setReport(null);
+
+    fetch(`/api/logs?runId=${runId}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch logs for this run.');
+        }
+        return res.json();
+      })
+      .then((logs) => {
+        const originalityLog = logs.find((l: any) => l.agent_name === 'originality_agent');
+        const pipelineStatusLog = logs.find((l: any) => l.agent_name === 'pipeline_status');
+
+        if (originalityLog) {
+          const inputVal = typeof originalityLog.input === 'string' ? JSON.parse(originalityLog.input) : originalityLog.input;
+          const outputVal = typeof originalityLog.output === 'string' ? JSON.parse(originalityLog.output) : originalityLog.output;
+
+          setInput(inputVal.input || '');
+          setWebsiteContext(inputVal.websiteContext || '');
+          setReport(outputVal || null);
+        } else if (pipelineStatusLog) {
+          const inputVal = typeof pipelineStatusLog.input === 'string' ? JSON.parse(pipelineStatusLog.input) : pipelineStatusLog.input;
+          const outputVal = typeof pipelineStatusLog.output === 'string' ? JSON.parse(pipelineStatusLog.output) : pipelineStatusLog.output;
+
+          setInput(inputVal.title || '');
+          if (outputVal.result) {
+            setReport(outputVal.result);
+          }
+        } else {
+          setError('No originality analysis data found for this run ID.');
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message || 'Failed to retrieve originality analysis from history.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [runId]);
+
+  // Dynamic document title update
+  useEffect(() => {
+    if (input.trim()) {
+      const displayTitle = input.trim().slice(0, 30) + (input.trim().length > 30 ? '...' : '');
+      document.title = `Originality Analysis: ${displayTitle}`;
+    } else {
+      document.title = `Originality Analysis`;
+    }
+  }, [input]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +119,7 @@ export default function OriginalityPage() {
   return (
     <div className="container">
       <div className="header">
-        <h1 className="title-gradient">Originality & opportunity Analysis</h1>
+        <h1 className="title-gradient">Originality & Opportunity Analysis</h1>
         <p className="subtitle">Determine how your content can provide unique value beyond existing search results and stand out from the competition.</p>
       </div>
 
@@ -221,5 +282,18 @@ export default function OriginalityPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OriginalityPage() {
+  return (
+    <Suspense fallback={
+      <div className="container loader-container">
+        <div className="spinner"></div>
+        <p className="loading-text">Loading...</p>
+      </div>
+    }>
+      <OriginalityPageContent />
+    </Suspense>
   );
 }
