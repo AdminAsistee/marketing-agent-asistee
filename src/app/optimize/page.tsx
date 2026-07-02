@@ -54,17 +54,25 @@ function OptimizePageContent() {
   const searchParams = useSearchParams();
   const runId = searchParams.get('runId');
 
-  // Load from runId query param if present
+  // Load from runId query param or localStorage if present
   useEffect(() => {
-    if (!runId) return;
+    const savedRunId = typeof window !== 'undefined' ? localStorage.getItem('active_optimization_run_id') : null;
+    const targetRunId = runId || savedRunId;
+
+    if (!targetRunId) return;
+
+    if (!runId && savedRunId) {
+      router.replace(`/optimize?runId=${savedRunId}`);
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setTrendData(null);
     setReport(null);
-    setCurrentRunId(runId);
+    setCurrentRunId(targetRunId);
 
-    fetch(`/api/logs?runId=${runId}`)
+    fetch(`/api/logs?runId=${targetRunId}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error('Failed to fetch logs for this run.');
@@ -124,7 +132,7 @@ function OptimizePageContent() {
       .finally(() => {
         setLoading(false);
       });
-  }, [runId]);
+  }, [runId, router]);
 
   // Polling for progress during in-place improvement
   useEffect(() => {
@@ -227,9 +235,13 @@ function OptimizePageContent() {
       }
 
       const data = await response.json();
+      if (!data.run_id) {
+        throw new Error('Failed to receive a valid optimization run ID from the server.');
+      }
       setTrendData(data.trendData);
       setReport(data.report);
       setCurrentRunId(data.run_id);
+      localStorage.setItem('active_optimization_run_id', data.run_id);
 
       // Notify history subscribers in other tabs!
       const channel = new BroadcastChannel('content_agent_history');
@@ -326,6 +338,25 @@ ${websiteContext || 'None provided'}
     } finally {
       setStopping(false);
     }
+  };
+
+  const handleStartNewOptimization = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('active_optimization_run_id');
+    }
+    router.replace('/optimize');
+
+    setArticle('');
+    setTargetKeyword('');
+    setWebsiteContext('');
+    setTrendData(null);
+    setReport(null);
+    setCurrentRunId(null);
+    setImprovementLogs([]);
+    setPipelineStatus('Pending');
+    setOptimizedDraft(null);
+    setImproving(false);
+    setResultsTab('audit');
   };
 
   // Word count and reading time calculation
@@ -505,6 +536,25 @@ ${websiteContext || 'None provided'}
       <div className="header">
         <h1 className="title-gradient">Article SEO Optimizer</h1>
         <p className="subtitle">Analyze existing articles against search trends to find content gaps, optimize titles, and generate improved drafts.</p>
+        {currentRunId && (
+          <div style={{ marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={handleStartNewOptimization}
+              className="btn"
+              style={{
+                padding: '8px 16px',
+                fontSize: '0.85rem',
+                background: 'transparent',
+                border: '1px solid var(--card-border)',
+                color: 'var(--foreground)',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Start New Optimization
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (

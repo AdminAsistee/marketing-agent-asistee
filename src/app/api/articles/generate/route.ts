@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     // 3. Return the response matching the API-First structure
     return NextResponse.json({
       runId,
+      run_id: runId,
       status: 'Running',
       article: null,
       metadata: {
