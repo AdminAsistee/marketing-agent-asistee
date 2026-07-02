@@ -8,10 +8,12 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
   let targetKeyword = '';
   const runId = crypto.randomUUID();
+  let userId = 'anonymous';
   
   try {
     const body = await req.json().catch(() => ({}));
     const { keyword, websiteContext, industry } = body;
+    userId = body.userId || 'anonymous';
     
     targetKeyword = keyword || body.keyword;
     
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword.trim(), feature: 'SEO Intelligence', keyword: targetKeyword.trim(), websiteContext, industry },
+      input: { title: targetKeyword.trim(), feature: 'SEO Intelligence', userId: userId || 'anonymous', keyword: targetKeyword.trim(), websiteContext, industry },
       output: { status: 'Running' },
       latency_ms: 0
     });
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword.trim(), feature: 'SEO Intelligence', keyword: targetKeyword.trim(), websiteContext, industry },
+      input: { title: targetKeyword.trim(), feature: 'SEO Intelligence', userId: userId || 'anonymous', keyword: targetKeyword.trim(), websiteContext, industry },
       output: { status: 'Completed', result: { trendData, recommendations } },
       latency_ms: Date.now() - startTime
     });
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: targetKeyword ? targetKeyword.trim() : 'SEO Search', feature: 'SEO Intelligence', keyword: targetKeyword || '', websiteContext: '' },
+      input: { title: targetKeyword ? targetKeyword.trim() : 'SEO Search', feature: 'SEO Intelligence', userId: userId, keyword: targetKeyword || '', websiteContext: '' },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });

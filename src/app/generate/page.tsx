@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getOrCreateUserId } from '@/lib/user';
 
 interface SeoRecommendations {
   primaryKeyword: string;
@@ -123,6 +124,7 @@ ${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\
         customWordCount: customWordCount ? parseInt(customWordCount) : undefined
       };
 
+      const userId = getOrCreateUserId();
       const response = await fetch('/api/articles/generate', {
         method: 'POST',
         headers: {
@@ -131,7 +133,8 @@ ${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\
         body: JSON.stringify({ 
           prd, 
           seoRecommendations: seoRecs?.recommendations,
-          writingConfiguration
+          writingConfiguration,
+          userId
         }),
       });
 

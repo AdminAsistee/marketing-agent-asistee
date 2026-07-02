@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     
     // Support standard API-First parameters
-    const { topic, requirements, writingConfiguration, seoContext } = body;
+    const { topic, requirements, writingConfiguration, seoContext, userId } = body;
     
     // Support backwards compatibility parameters (frontend)
     const prdInput = body.prd;
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       input: { 
         title: resolvedTopic, 
         feature: featureType, 
+        userId: userId || 'anonymous',
         prdSnippet: prd.slice(0, 150), 
         hasSeoRecs: !!seoRecommendations,
         writingConfiguration
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 2. Start the pipeline in the background (asynchronous, non-blocking)
-    runPipelineInBackground(runId, prd, seoRecommendations, writingConfiguration).catch((err) => {
+    runPipelineInBackground(runId, prd, seoRecommendations, writingConfiguration, userId).catch((err) => {
       console.error(`[BACKGROUND ERROR] Pipeline background process crashed:`, err);
     });
 

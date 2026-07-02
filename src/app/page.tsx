@@ -51,7 +51,7 @@ export default function HomePage() {
       <div className="card" style={{ padding: '30px', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--card-border)', marginBottom: '40px' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '12px' }}>⚙️ How It Works</h2>
         <p style={{ lineHeight: '1.6', fontSize: '1rem', color: 'var(--foreground)' }}>
-          The Editorial Engine orchestrates a collaborative network of specialized AI agents to automate the entire writing and SEO research workflow. It combines **search grounding**, **AI drafting**, **unsupported claim fact-checking**, **brand tone polishing**, and **rubric scoring** into a single, seamless, and controllable publishing lifecycle.
+          The Editorial Engine orchestrates a collaborative network of specialized AI agents to automate the entire writing and SEO research workflow. It combines <strong>search grounding</strong>, <strong>AI drafting</strong>, <strong>unsupported claim fact-checking</strong>, <strong>brand tone polishing</strong>, and <strong>rubric scoring</strong> into a single, seamless, and controllable publishing lifecycle.
         </p>
       </div>
 

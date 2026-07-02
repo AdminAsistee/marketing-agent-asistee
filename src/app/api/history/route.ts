@@ -10,11 +10,18 @@ export async function GET(req: NextRequest) {
     const feature = searchParams.get('feature');
     const limitParam = searchParams.get('limit');
     const pageParam = searchParams.get('page');
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      // Enforce strict privacy user isolation: return empty array if no userId is queried
+      return NextResponse.json([]);
+    }
 
     let query = supabase
       .from('agent_logs')
       .select('*')
       .eq('agent_name', 'pipeline_status')
+      .eq('input->>userId', userId)
       .order('timestamp', { ascending: false });
 
     const limit = limitParam ? parseInt(limitParam, 10) : null;

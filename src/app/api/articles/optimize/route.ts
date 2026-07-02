@@ -11,10 +11,12 @@ import { logger } from '@/lib/logger';
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   const runId = crypto.randomUUID();
+  let userId = 'anonymous';
   
   try {
     const body = await req.json().catch(() => ({}));
     const { article, seoContext, writingConfiguration } = body;
+    userId = body.userId || 'anonymous';
     
     // Support targetKeyword directly as a fallback
     const targetKeyword = body.targetKeyword || (typeof seoContext === 'string' ? seoContext : seoContext?.primaryKeyword);
@@ -40,6 +42,7 @@ export async function POST(req: NextRequest) {
       input: { 
         title: targetKeyword.trim(), 
         feature: 'Optimize Existing Article', 
+        userId: userId || 'anonymous',
         targetKeyword: targetKeyword.trim(), 
         articleSnippet: article.slice(0, 150),
         writingConfiguration
@@ -115,6 +118,7 @@ ${article.trim()}
       input: { 
         title: targetKeyword.trim(), 
         feature: 'Optimize Existing Article', 
+        userId: userId || 'anonymous',
         targetKeyword: targetKeyword.trim(), 
         articleSnippet: article.slice(0, 150),
         writingConfiguration
@@ -140,7 +144,14 @@ ${article.trim()}
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: 'Optimization Run', feature: 'Optimize Existing Article', targetKeyword: '', websiteContext: '', articleSnippet: '' },
+      input: { 
+        title: 'Optimization Run', 
+        feature: 'Optimize Existing Article', 
+        userId: userId || 'anonymous',
+        targetKeyword: '', 
+        websiteContext: '', 
+        articleSnippet: '' 
+      },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });

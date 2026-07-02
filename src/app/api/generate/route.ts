@@ -45,7 +45,8 @@ export async function runPipelineInBackground(
   runId: string,
   prd: string,
   seoRecommendations: any,
-  writingConfiguration?: any
+  writingConfiguration?: any,
+  userId?: string
 ) {
   const startTime = Date.now();
   const topic = getPrdTopic(prd);
@@ -179,7 +180,13 @@ export async function runPipelineInBackground(
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
+      input: { 
+        title: topic, 
+        feature: featureType, 
+        userId: userId || 'anonymous',
+        prdSnippet: prd.slice(0, 150), 
+        hasSeoRecs: !!seoRecommendations 
+      },
       output: { 
         status: 'Completed', 
         result: finalArticle,
@@ -197,7 +204,13 @@ export async function runPipelineInBackground(
     await logger.logAgentTransaction({
       run_id: runId,
       agent_name: 'pipeline_status' as any,
-      input: { title: topic, feature: featureType, prdSnippet: prd.slice(0, 150), hasSeoRecs: !!seoRecommendations },
+      input: { 
+        title: topic, 
+        feature: featureType, 
+        userId: userId || 'anonymous',
+        prdSnippet: prd.slice(0, 150), 
+        hasSeoRecs: !!seoRecommendations 
+      },
       output: { status: 'Failed', error: errorMessage },
       latency_ms: Date.now() - startTime
     });
@@ -207,7 +220,7 @@ export async function runPipelineInBackground(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { prd, seoRecommendations, writingConfiguration } = body;
+    const { prd, seoRecommendations, writingConfiguration, userId } = body;
     let runId = body.runId;
 
     // Robust validation: Check for empty or malformed inputs
@@ -253,6 +266,7 @@ export async function POST(req: NextRequest) {
       input: { 
         title: topic, 
         feature: featureType, 
+        userId: userId || 'anonymous',
         prdSnippet: prd.slice(0, 150), 
         hasSeoRecs: !!seoRecommendations,
         writingConfiguration
@@ -262,7 +276,7 @@ export async function POST(req: NextRequest) {
     });
 
     // 2. Start the pipeline in the background (asynchronous, non-blocking)
-    runPipelineInBackground(runId, prd, seoRecommendations, writingConfiguration).catch((err) => {
+    runPipelineInBackground(runId, prd, seoRecommendations, writingConfiguration, userId).catch((err) => {
       console.error(`[BACKGROUND ERROR] Pipeline background process crashed:`, err);
     });
 

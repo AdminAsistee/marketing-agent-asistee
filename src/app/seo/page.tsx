@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { getOrCreateUserId } from '@/lib/user';
 
 interface TrendData {
   keyword: string;
@@ -100,6 +101,28 @@ function SeoPageContent() {
     }
   }, [keyword]);
 
+  const [seoProgressStep, setSeoProgressStep] = useState(0);
+
+  useEffect(() => {
+    if (!loading) {
+      if (recommendations) {
+        setSeoProgressStep(4);
+      } else {
+        setSeoProgressStep(0);
+      }
+      return;
+    }
+
+    setSeoProgressStep(1); // Data Collection
+    const t1 = setTimeout(() => setSeoProgressStep(2), 2500); // Trend Analysis
+    const t2 = setTimeout(() => setSeoProgressStep(3), 6000); // Keyword Recommendations
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading, recommendations]);
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!keyword.trim()) {
@@ -113,12 +136,13 @@ function SeoPageContent() {
     setRecommendations(null);
 
     try {
+      const userId = getOrCreateUserId();
       const response = await fetch('/api/seo/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ keyword, websiteContext }),
+        body: JSON.stringify({ keyword, websiteContext, userId }),
       });
 
       if (!response.ok) {
@@ -153,6 +177,86 @@ function SeoPageContent() {
         <h1 className="title-gradient">SEO Keyword Intelligence</h1>
         <p className="subtitle">Identify high-value keywords, rising queries, and optimized blog content ideas using search trends.</p>
       </div>
+
+      {/* Horizontal Progress Timeline */}
+      {(loading || recommendations) && (
+        <div className="card" style={{ margin: '0 0 30px 0', padding: '24px' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
+            Pipeline Progress
+          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            {[
+              { label: 'Data Collection', step: 1 },
+              { label: 'Trend Analysis', step: 2 },
+              { label: 'Keyword Recommendations', step: 3 },
+              { label: 'Complete', step: 4 }
+            ].map((st, idx, arr) => {
+              const isCompleted = seoProgressStep > st.step || seoProgressStep === 4;
+              const isRunning = seoProgressStep === st.step;
+              
+              let circleColor = 'var(--card-border)';
+              let textColor = 'var(--gray-muted)';
+              let isPulse = false;
+
+              if (isCompleted) {
+                circleColor = 'var(--success)';
+                textColor = 'var(--success)';
+              } else if (isRunning) {
+                circleColor = 'var(--primary)';
+                textColor = 'var(--primary)';
+                isPulse = true;
+              }
+
+              return (
+                <React.Fragment key={idx}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '100px', position: 'relative' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: circleColor,
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.85rem',
+                      fontWeight: 'bold',
+                      marginBottom: '8px',
+                      transition: 'all 0.3s ease',
+                      boxShadow: isPulse ? '0 0 10px var(--primary)' : 'none',
+                      animation: isPulse ? 'pulse 1.5s infinite' : 'none'
+                    }}>
+                      {isCompleted ? '✓' : idx + 1}
+                    </div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: textColor, textAlign: 'center', transition: 'all 0.3s ease' }}>
+                      {st.label}
+                    </span>
+                  </div>
+                  {idx < arr.length - 1 && (
+                    <div style={{
+                      flex: '1',
+                      height: '2px',
+                      background: isCompleted ? 'var(--success)' : 'var(--card-border)',
+                      margin: '0 10px',
+                      minWidth: '20px',
+                      alignSelf: 'center',
+                      transition: 'all 0.3s ease',
+                      marginBottom: '20px'
+                    }} />
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes pulse {
+              0% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.1); opacity: 0.8; }
+              100% { transform: scale(1); opacity: 1; }
+            }
+          `}} />
+        </div>
+      )}
 
       {loading ? (
         <div className="card loader-container">

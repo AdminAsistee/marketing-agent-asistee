@@ -509,57 +509,119 @@ export default function TimelinePage({ params }: { params: Promise<{ runId: stri
         <>
           {getPipelineBanner()}
 
-          {/* Sequential Progress Tracker */}
-          <div className="card" style={{ margin: '0 0 30px 0', padding: '24px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
-              Pipeline Progress Tracking
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-              {progressStages.map((stage) => {
-                const info = getStageStatus(stage.key);
-                let color = 'var(--gray-muted)';
-                let isPulse = false;
-                let isStrikethrough = false;
+          {/* Sequential Horizontal Progress Timeline */}
+          {(() => {
+            const steps = [
+              { label: 'Research', key: 'research' },
+              { label: 'Writing', key: 'writer' },
+              { label: 'Fact Checking', key: 'fact-check' },
+              { label: 'Style Polishing', key: 'style' },
+              { label: 'Quality Evaluation', key: 'rubric' },
+              { label: 'Complete', key: 'complete' }
+            ];
 
-                if (info.status === 'completed') color = 'var(--success)';
-                if (info.status === 'warning') color = 'var(--warning)';
-                if (info.status === 'failed') color = 'var(--error)';
-                if (info.status === 'running') {
-                  color = 'var(--primary)';
-                  isPulse = true;
-                }
-                if (info.status === 'skipped') {
-                  color = 'var(--gray-muted)';
-                  isStrikethrough = true;
-                }
+            const mappedSteps = steps.map((step) => {
+              if (step.key === 'complete') {
+                return {
+                  label: step.label,
+                  status: pipelineStatus === 'Completed' ? 'completed' : 'pending'
+                };
+              }
+              const info = getStageStatus(step.key);
+              return {
+                label: step.label,
+                status: info.status as 'pending' | 'running' | 'completed' | 'failed' | 'warning' | 'skipped'
+              };
+            });
 
-                return (
-                  <div 
-                    key={stage.key} 
-                    style={{
-                      padding: '12px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid var(--card-border)',
-                      borderRadius: '8px',
-                      color: color,
-                      fontWeight: info.status === 'running' || info.status === 'completed' ? 700 : 500,
-                      textDecoration: isStrikethrough ? 'line-through' : 'none',
-                      animation: isPulse ? 'pulse-glowing 2s infinite' : 'none'
-                    }}
-                  >
-                    <style>{`
-                      @keyframes pulse-glowing {
-                        0% { background: rgba(99, 102, 241, 0.05); }
-                        50% { background: rgba(99, 102, 241, 0.15); }
-                        100% { background: rgba(99, 102, 241, 0.05); }
-                      }
-                    `}</style>
-                    {info.text || `○ ${stage.label}`}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            // If pipeline is fully completed, make all steps green
+            const isFullyCompleted = pipelineStatus === 'Completed';
+            const finalSteps = mappedSteps.map(step => ({
+              ...step,
+              status: isFullyCompleted ? 'completed' : step.status
+            }));
+
+            return (
+              <div className="card" style={{ margin: '0 0 30px 0', padding: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
+                  Pipeline Progress
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  {finalSteps.map((step, idx) => {
+                    let circleColor = 'var(--card-border)';
+                    let textColor = 'var(--gray-muted)';
+                    let isPulse = false;
+
+                    if (step.status === 'completed') {
+                      circleColor = 'var(--success)';
+                      textColor = 'var(--success)';
+                    } else if (step.status === 'running') {
+                      circleColor = 'var(--primary)';
+                      textColor = 'var(--primary)';
+                      isPulse = true;
+                    } else if (step.status === 'failed') {
+                      circleColor = 'var(--error)';
+                      textColor = 'var(--error)';
+                    } else if (step.status === 'warning') {
+                      circleColor = 'var(--warning)';
+                      textColor = 'var(--warning)';
+                    } else if (step.status === 'skipped') {
+                      circleColor = 'var(--gray-muted)';
+                      textColor = 'var(--gray-muted)';
+                    }
+
+                    return (
+                      <React.Fragment key={idx}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '100px', position: 'relative' }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: circleColor,
+                            color: '#fff',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.85rem',
+                            fontWeight: 'bold',
+                            marginBottom: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: isPulse ? '0 0 10px var(--primary)' : 'none',
+                            animation: isPulse ? 'pulse 1.5s infinite' : 'none'
+                          }}>
+                            {step.status === 'completed' ? '✓' : idx + 1}
+                          </div>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: textColor, textAlign: 'center', transition: 'all 0.3s ease' }}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < finalSteps.length - 1 && (
+                          <div style={{
+                            flex: '1',
+                            height: '2px',
+                            background: step.status === 'completed' ? 'var(--success)' : 'var(--card-border)',
+                            margin: '0 10px',
+                            minWidth: '20px',
+                            alignSelf: 'center',
+                            transition: 'all 0.3s ease',
+                            marginBottom: '20px'
+                          }} />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+                {/* Global animation style for pulse */}
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @keyframes pulse {
+                    0% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.1); opacity: 0.8; }
+                    100% { transform: scale(1); opacity: 1; }
+                  }
+                `}} />
+              </div>
+            );
+          })()}
 
           {/* View Mode Toggle Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>

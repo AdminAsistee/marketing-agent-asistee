@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { getOrCreateUserId } from '@/lib/user';
 
 interface TrendData {
   keyword: string;
@@ -221,12 +222,13 @@ function OptimizePageContent() {
     setPipelineStatus('Pending');
 
     try {
+      const userId = getOrCreateUserId();
       const response = await fetch('/api/articles/optimize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ article, websiteContext, targetKeyword }),
+        body: JSON.stringify({ article, websiteContext, targetKeyword, userId }),
       });
 
       if (!response.ok) {
@@ -287,6 +289,7 @@ ${websiteContext || 'None provided'}
       };
 
       // 3. Trigger content generation pipeline using the SAME runId
+      const userId = getOrCreateUserId();
       const response = await fetch('/api/articles/generate', {
         method: 'POST',
         headers: {
@@ -295,7 +298,8 @@ ${websiteContext || 'None provided'}
         body: JSON.stringify({
           prd: customPrd,
           seoRecommendations,
-          runId: currentRunId
+          runId: currentRunId,
+          userId
         }),
       });
 
@@ -918,67 +922,134 @@ ${websiteContext || 'None provided'}
                     );
                   })()}
 
-                  {/* Sequential Progress Tracker Card */}
-                  <div className="card" style={{ margin: 0, padding: '24px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
-                      Pipeline Progress Tracking
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                      {['research', 'writer', 'fact-check', 'style'].map((stKey) => {
-                        const info = getStageStatus(stKey);
-                        let color = 'var(--gray-muted)';
-                        let isPulse = false;
-                        let isStrikethrough = false;
+                  {/* Sequential Progress Timeline Card */}
+                  {(() => {
+                    const steps = [
+                      { label: 'Analysis', key: 'analysis' },
+                      { label: 'Recommendations', key: 'recs' },
+                      { label: 'Optimization', key: 'optimization' },
+                      { label: 'Quality Check', key: 'quality' },
+                      { label: 'Complete', key: 'complete' }
+                    ];
 
-                        if (info.status === 'completed') color = 'var(--success)';
-                        if (info.status === 'warning') color = 'var(--warning)';
-                        if (info.status === 'failed') color = 'var(--error)';
-                        if (info.status === 'running') {
-                          color = 'var(--primary)';
-                          isPulse = true;
-                        }
-                        if (info.status === 'skipped') {
-                          color = 'var(--gray-muted)';
-                          isStrikethrough = true;
-                        }
+                    const mappedSteps = steps.map((step) => {
+                      if (step.key === 'analysis') {
+                        return {
+                          label: step.label,
+                          status: report ? 'completed' : (loading ? 'running' : 'pending')
+                        };
+                      }
+                      if (step.key === 'recs') {
+                        return {
+                          label: step.label,
+                          status: report ? 'completed' : 'pending'
+                        };
+                      }
+                      if (step.key === 'optimization') {
+                        if (!improving) return { label: step.label, status: 'pending' };
+                        const hasWriter = improvementLogs.some(l => l.agent_name.startsWith('writer_agent_attempt'));
+                        const hasStyle = improvementLogs.some(l => l.agent_name === 'style-polisher');
+                        if (hasStyle) return { label: step.label, status: 'completed' };
+                        if (hasWriter) return { label: step.label, status: 'running' };
+                        return { label: step.label, status: 'running' }; // starting
+                      }
+                      if (step.key === 'quality') {
+                        if (!improving) return { label: step.label, status: 'pending' };
+                        const hasFactChecker = improvementLogs.some(l => l.agent_name.startsWith('fact_checker_attempt'));
+                        const isFinished = pipelineStatus === 'Completed' || pipelineStatus === 'Failed' || pipelineStatus === 'Cancelled';
+                        if (isFinished) return { label: step.label, status: 'completed' };
+                        if (hasFactChecker) return { label: step.label, status: 'running' };
+                        return { label: step.label, status: 'pending' };
+                      }
+                      if (step.key === 'complete') {
+                        return {
+                          label: step.label,
+                          status: pipelineStatus === 'Completed' ? 'completed' : 'pending'
+                        };
+                      }
+                      return { label: step.label, status: 'pending' };
+                    });
 
-                        const labelText = stKey === 'research' ? 'Researching sources' : (stKey === 'writer' ? 'Writing article' : (stKey === 'fact-check' ? 'Quality checking / verification' : 'Finalizing style & tone'));
+                    const isFullyCompleted = pipelineStatus === 'Completed';
+                    const finalSteps = mappedSteps.map(step => ({
+                      ...step,
+                      status: isFullyCompleted ? 'completed' : step.status
+                    }));
 
-                        return (
-                          <div
-                            key={stKey}
-                            className={`progress-step-indicator ${isPulse ? 'pulse' : ''}`}
-                            style={{
-                              borderLeft: `3px solid ${color}`,
-                              color: color,
-                              textDecoration: isStrikethrough ? 'line-through' : 'none'
-                            }}
-                          >
-                            <style dangerouslySetInnerHTML={{ __html: `
-                              @keyframes pulseBorder {
-                                0% { opacity: 0.6; }
-                                50% { opacity: 1; }
-                                100% { opacity: 0.6; }
-                              }
-                              .progress-step-indicator {
-                                background: rgba(255, 255, 255, 0.01);
-                                border: 1px solid var(--card-border);
-                                padding: 12px 14px;
-                                borderRadius: 8px;
-                                fontSize: 0.85rem;
-                                fontWeight: 600;
-                              }
-                              .progress-step-indicator.pulse {
-                                animation: pulseBorder 1.5s infinite;
-                                background: rgba(99, 102, 241, 0.03);
-                              }
-                            `}} />
-                            {info.text || `○ ${labelText}`}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                    return (
+                      <div className="card" style={{ margin: 0, padding: '24px' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
+                          Pipeline Progress
+                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                          {finalSteps.map((step, idx) => {
+                            let circleColor = 'var(--card-border)';
+                            let textColor = 'var(--gray-muted)';
+                            let isPulse = false;
+
+                            if (step.status === 'completed') {
+                              circleColor = 'var(--success)';
+                              textColor = 'var(--success)';
+                            } else if (step.status === 'running') {
+                              circleColor = 'var(--primary)';
+                              textColor = 'var(--primary)';
+                              isPulse = true;
+                            } else if (step.status === 'failed') {
+                              circleColor = 'var(--error)';
+                              textColor = 'var(--error)';
+                            }
+
+                            return (
+                              <React.Fragment key={idx}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '100px', position: 'relative' }}>
+                                  <div style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    background: circleColor,
+                                    color: '#fff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 'bold',
+                                    marginBottom: '8px',
+                                    transition: 'all 0.3s ease',
+                                    boxShadow: isPulse ? '0 0 10px var(--primary)' : 'none',
+                                    animation: isPulse ? 'pulse 1.5s infinite' : 'none'
+                                  }}>
+                                    {step.status === 'completed' ? '✓' : idx + 1}
+                                  </div>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: textColor, textAlign: 'center', transition: 'all 0.3s ease' }}>
+                                    {step.label}
+                                  </span>
+                                </div>
+                                {idx < finalSteps.length - 1 && (
+                                  <div style={{
+                                    flex: '1',
+                                    height: '2px',
+                                    background: step.status === 'completed' ? 'var(--success)' : 'var(--card-border)',
+                                    margin: '0 10px',
+                                    minWidth: '20px',
+                                    alignSelf: 'center',
+                                    transition: 'all 0.3s ease',
+                                    marginBottom: '20px'
+                                  }} />
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                        <style dangerouslySetInnerHTML={{ __html: `
+                          @keyframes pulse {
+                            0% { transform: scale(1); opacity: 1; }
+                            50% { transform: scale(1.1); opacity: 0.8; }
+                            100% { transform: scale(1); opacity: 1; }
+                          }
+                        `}} />
+                      </div>
+                    );
+                  })()}
 
                   {/* View Mode Toggle Controls */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginTop: '10px' }}>

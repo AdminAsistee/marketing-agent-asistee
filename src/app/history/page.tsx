@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getOrCreateUserId } from '@/lib/user';
 
 interface HistoryRecord {
   run_id: string;
@@ -32,7 +33,8 @@ export default function HistoryPage() {
       if (showLoader) setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/history');
+      const userId = getOrCreateUserId();
+      const res = await fetch(`/api/history?userId=${userId}`);
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
