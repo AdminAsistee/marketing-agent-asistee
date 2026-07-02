@@ -25,7 +25,7 @@ export default function Navbar() {
       justifyContent: 'space-between',
       alignItems: 'center',
       padding: '16px 24px',
-      background: 'rgba(18, 22, 30, 0.75)',
+      background: 'var(--card-bg)',
       borderBottom: '1px solid var(--card-border)',
       backdropFilter: 'blur(12px)',
       position: 'sticky',
