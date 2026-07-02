@@ -94,8 +94,7 @@ export async function researchAgent(prd: string, runId: string): Promise<Researc
       sources: normalizedSources,
     };
 
-    const respObj = response as { usageMetadata?: { candidatesTokenCount?: number } };
-    const tokenCount = respObj.usageMetadata?.candidatesTokenCount || undefined;
+    const tokenCount = response.usageMetadata?.totalTokenCount || undefined;
 
     // Log successful transaction
     await logger.logAgentTransaction({

@@ -15,7 +15,7 @@ export const AGENT_MODELS = {
   writer: 'gemini-3.5-flash',
   'fact-checker': 'gemini-3.1-pro-preview',
   'style-polisher': 'gemini-3.5-flash',
-  'rubric-grader': 'gemini-3.1-pro-preview',
+  'rubric-grader': 'gemini-3.5-flash',
   'seo-agent': 'gemini-3.5-flash',
   'seo-optimizer-agent': 'gemini-3.5-flash',
 } as const;

@@ -123,7 +123,7 @@ ${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\
         customWordCount: customWordCount ? parseInt(customWordCount) : undefined
       };
 
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/articles/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

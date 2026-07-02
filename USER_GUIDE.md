@@ -1,139 +1,97 @@
-# AI Content Generation & SEO Suite User Guide
+# AI Content Intelligence Platform User Guide
 
-Welcome to the **AI Content Generation & SEO Suite**! This application is designed to help content creators, marketers, and business owners plan, generate, and optimize search-aligned, fact-checked blog articles and landing page copy.
-
----
-
-## Overview
-
-This application leverages a collaborative team of specialized **AI agents** working together to automate the entire writing and SEO research workflow:
-1. **Research Agent (Gemini Grounding):** Searches the live web to gather verified facts and citations.
-2. **SEO Analysis Agent:** Analyzes Google Search interest data and suggests keywords.
-3. **Writer Agent:** Writes drafts using custom content guidelines and structural requirements.
-4. **Fact-Checker Agent:** Checks the writer's draft against web search results, flags unsupported claims, and requests revisions.
-5. **Style Polisher Agent:** Enhances vocabulary and styling for a premium feel.
-6. **Rubric Grader Agent:** Scores the content based on clarity, accuracy, and completeness.
+Welcome to the **AI Content Intelligence Platform** user guide. This platform is a collaborative content creation and SEO optimization workspace. It helps content creators, copywriters, and marketers research topics, write drafts, verify factual accuracy, and optimize existing articles to rank on search engines.
 
 ---
 
-## Navigation
-Use the navigation bar at the top of the screen to quickly jump between the core features:
-* **Generate Article:** Draft fact-checked blog articles from a outline or Product Requirement Document (PRD).
-* **SEO Intelligence:** Explore search queries and trending topics.
-* **Optimize Existing Article:** Analyze and improve an existing draft against trend statistics.
+## 🚀 Accessing the Platform
+
+The platform is accessed through your web browser at:
+`https://content-intelligence.platform.local` *(or your company's custom portal link)*
+
+No installation or local setup is required. Log in with your standard corporate credentials.
 
 ---
 
-## Feature 1: Generate New Article
+## ✍️ Creating a New Article
 
-**Purpose:** Draft a high-quality, fact-checked marketing article from scratch.
+Use this feature when you want to write a brand new, fact-checked, and search-optimized article from a basic idea or Product Requirement Document (PRD).
 
-### Steps
-1. Navigate to **Generate Article** (`/generate`).
-2. Enter your Product Requirement Document (PRD) or basic guidelines in the input text area.
-3. Click **Start Content Generation Pipeline**.
-4. The system will load the **Pipeline Generation Lifecycle** page, showing the live status and progress of the Research, Writing, Fact-Checking, and Grading agents.
-5. Review the final article, citations, and evaluation scores on the timeline page.
-6. Click **📄 Export to PDF** to print or save a clean, professional copy.
-
-### Example Input
-```markdown
-# Product Requirement Document: Coffee Brewing Guide
-
-## Target Audience
-Coffee enthusiasts looking to upgrade their home setup.
-
-## Key Points
-- Introduce the pour-over method.
-- Explain the importance of grind size.
-- Highlight water temperature (between 195°F and 205°F).
-```
-
-### Example Output
-A structured article containing:
-* **Compelling Title:** "Mastering the Pour-Over: The Ultimate Home Coffee Brewing Guide"
-* **Introduction:** Hooking the reader and explaining home brewing popularity.
-* **Detailed Sections:** Explicit steps on pour-over, grind sizes, and water temp.
-* **Citations:** Embedded web sources backing up claims.
+### Step-by-Step Instructions
+1. Navigate to the **Generate Article** page from the top navigation bar.
+2. In the **PRD Content** box, enter your article topic, target keywords, or basic instructions. You can type instructions or paste an existing outline.
+3. (Optional) Adjust your style and formatting rules in the **Content Customization** panel (see the "Customizing Writing Style" section below).
+4. Click **Start Content Generation Pipeline**.
+5. The system will open the **Generation Lifecycle Timeline** page. Here, you can watch the specialized AI agents work in real-time:
+   * **Researching Sources:** Gathering live facts from the web.
+   * **Writing Article:** Drafting sections based on requirements.
+   * **Quality Verification:** The fact-checker scans the draft to ensure all details are accurate and supported.
+   * **Final Polishing:** Refines vocabulary, paragraph lengths, and formatting.
+   * **Quality Scoring:** Grades the final article on clarity, accuracy, and completeness.
+6. Once completed, you can read the finished draft.
+7. Click **📄 Export to PDF** to download a clean, print-ready document.
 
 ---
 
-## Feature 2: SEO Keyword Intelligence
+## 🛠️ Customizing Writing Style & Structure
 
-**Purpose:** Search-optimize your content ideas by retrieving live keyword trends before you write.
+Before launching a new article, you can fine-tune exactly how it should sound and look using the **Content Customization** panel.
 
-### Steps
-1. Navigate to **SEO Intelligence** (`/seo`).
-2. Fill in the **Target Keyword or Topic** (e.g. "Pokemon cards").
-3. Fill in the optional **Website or Business Context** (e.g. "TCGNakama marketplace").
-4. Click **Analyze SEO Opportunities**.
-5. Review the results:
-   * **Google Search Trends Analysis:** The interest summary, related queries, and rising topics showing spikes.
-   * **SEO Agent Recommendations:** The target primary keyword, secondary keywords, content ideas, and optimized titles.
-6. Click **🚀 Use in Blog Generator** to prefill the main blog generator with the recommendations.
+### Basic Settings
+* **Target Audience:** Select who the article is written for (e.g. *Beginners*, *Experts*, *Technical Users*) or enter a custom description (e.g., *Homeowners interested in solar panels*).
+* **Content Intent:** Specify the goal of the article (e.g. *Generate leads* focuses on call-to-actions and benefits, while *Inform readers* focuses on definitions and clear explanations).
+* **Primary & Secondary Tone:** Set the tone of voice (e.g., *Conversational* + *Educational*, or *Professional* + *Technical*).
+* **Industry / Domain:** Provide domain context so the AI uses correct terminology and jargon.
+
+### Advanced Style & Structure
+* **Formality Level:** Adjust formality with a slider from 1 (Casual/Colloquial) to 5 (Highly Formal/Academic).
+* **Paragraph Structure:** Choose *Short paragraphs* (mobile-friendly), *Balanced*, or *Long-form paragraphs* (traditional, in-depth).
+* **Allowed Formatting Elements:** Choose whether to allow bullet points, numbered lists, tables, headings, and concrete examples.
+* **Length Controls:** Adjust the target word count with a Short/Medium/Long selector, or enter a precise target word count (e.g. *1200 words*).
 
 ---
 
-## Feature 3: Existing Article Optimizer
+## 📈 Improving Existing Content (Article Optimizer)
 
-**Purpose:** Score an existing article against search trends and improve its structure.
+Use this feature to improve an article you have already written, making it more comprehensive and search-friendly.
 
-### Steps
-1. Navigate to **Optimize Existing Article** (`/optimize`).
-2. Enter the **Target Keyword** (e.g. "coffee brewing methods").
-3. Enter the **Website or Business Context** (e.g. "Local coffee shop").
-4. Paste your current draft into the **Existing Article Content** textarea.
+### Step-by-Step Instructions
+1. Navigate to the **Optimize Existing Article** page.
+2. Enter the **Target Keyword** you want the article to rank for (e.g. *home espresso recipe*).
+3. (Optional) Provide details about your website or business in the **Website Context** field.
+4. Paste your current draft into the **Existing Article Content** box.
 5. Click **Analyze & Optimize Article**.
-6. Review the report:
+6. The system will display an **SEO Audit Report**:
    * **SEO Score:** Rated out of 100.
-   * **Title & Intent Analysis:** How well your title fits search intent.
-   * **Missing Keywords & Gaps:** Trending keywords to add and topics you missed.
-   * **Optimized Titles:** Catchy alternatives.
-7. Click **✨ Improve Article with AI** to send the article and report directly to the Writer Agent. It will execute the full fact-checked rewriting pipeline and redirect you to the lifecycle timeline.
+   * **Keyword Gaps:** High-priority search terms that are missing.
+   * **Content Gaps:** Specific questions or topics you should discuss.
+   * **Optimized Titles:** Catchy title alternatives.
+7. Click **✨ Improve Article with AI** to automatically rewrite the draft. The writing agent will run a fact-checked optimization loop to fill the gaps and structure the text, redirecting you to the progress timeline.
 
 ---
 
-## Example Complete Workflow
+## 🔍 Using SEO Intelligence (Keyword Explorer)
 
-A typical end-to-end user flow:
+Before writing, explore search topics to plan your outlines and titles.
 
-```
-Step 1: Idea Exploration
-   Go to "SEO Intelligence" -> Search "coffee brewing" -> Find rising queries like "v60 technique".
-          │
-          ▼
-Step 2: Recommendations
-   Get recommendations (Primary: "v60 pour over technique", Title: "V60 Technique: Brew Coffee Like a Barista").
-          │
-          ▼
-Step 3: Transfer Context
-   Click "Use in Blog Generator" -> Prefill the PRD specification with the V60 details.
-          │
-          ▼
-Step 4: Generate Article
-   Click "Start Content Generation Pipeline" -> Review the final fact-checked draft.
-          │
-          ▼
-Step 5: Post-Publish Review
-   Paste a draft in "Article Optimizer" to review readability and missing keywords.
-          │
-          ▼
-Step 6: Iterative Refinement
-   Click "Improve Article with AI" -> Export the final perfected PDF.
-```
+### Step-by-Step Instructions
+1. Navigate to the **SEO Intelligence** page.
+2. Enter a keyword or topic (e.g. *mechanical keyboards*).
+3. Click **Analyze SEO Opportunities**.
+4. Review the search trends and recommendation report:
+   * **Search Interest Summary:** Overview of what users are searching for.
+   * **Related Queries:** Popular associated search terms.
+   * **Recommended Titles:** Optimized titles for new articles.
+   * **Content Ideas:** Subtopics to cover in your outline.
+5. Click **🚀 Use in Blog Generator** to prefill the article generator with these recommended titles, keywords, and ideas automatically.
 
 ---
 
-## Technical Overview
-* **Frontend:** Next.js with React (client-side state, local storage cache) and Tailwind-alternative CSS variables for clean dark-mode visuals.
-* **TypeScript:** Strong types for trend data, recommendations, reports, and agents.
-* **Generative AI:** Google Gen AI SDK utilizing `gemini-3.5-flash` with Google Search Grounding for live trends and fact checks.
-* **Telemetry & Database:** Supabase client tracking run IDs, latency, token count, inputs, and outputs in `agent_logs`.
+## 🕒 Viewing History & Telemetry
 
----
+Every article generation and optimization run is saved automatically.
 
-## Future Improvements
-* **Google Search Console Integration:** Read actual impression and click data to identify optimization targets automatically.
-* **Historical Keyword Interest Charts:** Plot search volume changes over time in interactive graphs.
-* **Competitor Gap Analysis:** Automatically parse competitor URLs and highlight missing subtopics.
-* **Social Media Intelligence:** Suggest headlines and hooks optimized for Twitter, LinkedIn, or newsletter distribution.
+### Step-by-Step Instructions
+1. Navigate to the **History** page.
+2. Review the list of previous runs, showing the run status (Completed, Failed, running), topic, and execution time.
+3. Click **View Details** on any card to view the progress timeline, evaluation grades, fact-checker reports, and the final polished article.

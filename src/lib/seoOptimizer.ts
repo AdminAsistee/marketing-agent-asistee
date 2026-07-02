@@ -157,7 +157,8 @@ Guidelines:
    - "weaknesses": Shortcomings in the article (e.g. dry explanation, lack of examples).
    - "seo_issues": SEO mistakes or deficiencies (e.g. main keyword not in first paragraph, missing H2 structure).
    - "missing_information": Explicit topics or details that must be added to provide comprehensive value.
-7. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.`;
+7. Do NOT output any text, markdown wraps, or markdown blocks outside the JSON object.
+8. Your suggested headings, title options, and improvement suggestions must strictly prioritize professional journalistic standards and readability. They should avoid keyword stuffing, robotic phrasing, and spelling out numbers (ensure money, measurements, percentages, statistics, dates, and quantities are represented numerically, e.g. "$21", "5 km", "25%").`;
 
     const contents = `Existing Article Content:
 ${article}

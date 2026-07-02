@@ -113,7 +113,7 @@ function SeoPageContent() {
     setRecommendations(null);
 
     try {
-      const response = await fetch('/api/seo/trends', {
+      const response = await fetch('/api/seo/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

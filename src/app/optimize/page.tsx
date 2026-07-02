@@ -213,7 +213,7 @@ function OptimizePageContent() {
     setPipelineStatus('Pending');
 
     try {
-      const response = await fetch('/api/seo/optimize', {
+      const response = await fetch('/api/articles/optimize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ ${websiteContext || 'None provided'}
       };
 
       // 3. Trigger content generation pipeline using the SAME runId
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/articles/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

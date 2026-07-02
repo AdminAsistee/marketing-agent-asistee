@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger';
 import { supabase } from '@/lib/supabase';
 import type { FactCheckerOutput, WriterDraft } from '@/lib/types';
 
-function getPrdTopic(prd: string): string {
+export function getPrdTopic(prd: string): string {
   const lines = prd.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();
@@ -41,7 +41,7 @@ async function checkIfCancelled(runId: string): Promise<boolean> {
   return false;
 }
 
-async function runPipelineInBackground(
+export async function runPipelineInBackground(
   runId: string,
   prd: string,
   seoRecommendations: any,

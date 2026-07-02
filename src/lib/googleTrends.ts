@@ -41,6 +41,10 @@ const trendDataResponseSchema = {
   required: ['relatedQueries', 'risingQueries', 'trendSummary']
 };
 
+// In-memory cache for search trends to optimize runtime and token usage
+const trendsCache = new Map<string, { data: TrendData; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes time-to-live
+
 /**
  * Retrieves search trends, related queries, rising topics, and popularity summary
  * using Gemini with Google Search Grounding to fetch live trend information.
@@ -48,6 +52,13 @@ const trendDataResponseSchema = {
 export async function fetchTrends(keyword: string): Promise<TrendData> {
   if (!keyword || !keyword.trim()) {
     throw new Error('Trends Retrieval Error: Keyword parameter is empty.');
+  }
+
+  const cacheKey = keyword.trim().toLowerCase();
+  const cached = trendsCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[CACHE HIT] Reusing cached Google Trends for: "${keyword}"`);
+    return cached.data;
   }
 
   try {
@@ -71,12 +82,17 @@ Focus on gathering live, real-time web search trend context and search interest 
     }
 
     const data = JSON.parse(responseText.trim());
-    return {
+    const result: TrendData = {
       keyword: keyword.trim(),
       relatedQueries: data.relatedQueries || [],
       risingQueries: data.risingQueries || [],
       trendSummary: data.trendSummary || '',
     };
+
+    // Save search trend result in cache
+    trendsCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+    return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[ERROR] Google Trends retrieval failed: ${errorMessage}`);

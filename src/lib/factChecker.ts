@@ -79,9 +79,6 @@ ${prd}
 --- WEB RESEARCH FINDINGS ---
 ${research.summary}
 
---- RESEARCH SOURCES ---
-${JSON.stringify(research.sources, null, 2)}
-
 --- CURRENT WRITER DRAFT ---
 ${JSON.stringify(draft, null, 2)}`;
 
