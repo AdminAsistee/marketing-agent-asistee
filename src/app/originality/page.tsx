@@ -40,7 +40,7 @@ function OriginalityPageContent() {
         return res.json();
       })
       .then((logs) => {
-        const originalityLog = logs.find((l: any) => l.agent_name === 'originality_agent');
+        const originalityLog = logs.find((l: any) => l.agent_name === 'research' || l.agent_name === 'originality_agent');
         const pipelineStatusLog = logs.find((l: any) => l.agent_name === 'pipeline_status');
 
         if (originalityLog) {
@@ -54,7 +54,8 @@ function OriginalityPageContent() {
           const inputVal = typeof pipelineStatusLog.input === 'string' ? JSON.parse(pipelineStatusLog.input) : pipelineStatusLog.input;
           const outputVal = typeof pipelineStatusLog.output === 'string' ? JSON.parse(pipelineStatusLog.output) : pipelineStatusLog.output;
 
-          setInput(inputVal.title || '');
+          setInput(inputVal.inputSnippet || inputVal.title || '');
+          setWebsiteContext(inputVal.websiteContext || '');
           if (outputVal.result) {
             setReport(outputVal.result);
           }
