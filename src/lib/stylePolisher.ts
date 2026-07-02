@@ -59,7 +59,8 @@ Follow these strict writing and style constraints:
    - Limit the use of bullet points; favor well-structured, easy-to-read paragraphs.
    - Remove clunky artificial transitions (e.g. "Furthermore,", "Moreover,", "In addition,").
 5. Prefer shorter, punchier sentences and natural sentence flow variation.
-6. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
+6. Output Formatting Rules: The text content of all fields (title, introduction, sections, conclusion) must NOT contain raw markdown symbols (like **, *, __, _), raw heading hashtags (like #, ##), raw newline escape characters (like \\n), code blocks, JSON formatting, or meta-commentary. Write text naturally.
+7. You must output a JSON object matching the requested schema exactly. Do not include any text outside the JSON block.`;
 
     const contents = `--- CURRENT VERIFIED DRAFT ---
 ${JSON.stringify(draft, null, 2)}`;
@@ -94,6 +95,30 @@ ${JSON.stringify(draft, null, 2)}`;
     if (!polishedDraft.title || !polishedDraft.introduction || !polishedDraft.sections || !polishedDraft.conclusion) {
       throw new Error('Style Polisher Agent response JSON is missing required keys.');
     }
+
+    // Apply sanitization layer to clean markdown formatting, escape characters, and headers
+    const sanitizeField = (text: string): string => {
+      if (!text) return '';
+      return text
+        .replace(/\\n/g, '\n') // Convert literal \n escape characters
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Strip bold asterisks
+        .replace(/\*(.*?)\*/g, '$1') // Strip italic asterisks
+        .replace(/__(.*?)__/g, '$1') // Strip bold underscores
+        .replace(/_(.*?)_/g, '$1') // Strip italic underscores
+        .replace(/^#+\s+/gm, '') // Strip markdown heading markers
+        .replace(/```[a-zA-Z]*/g, '') // Strip code block starts
+        .replace(/```/g, '') // Strip code block ends
+        .replace(/\n{3,}/g, '\n\n') // Normalize excessive newlines
+        .trim();
+    };
+
+    polishedDraft.title = sanitizeField(polishedDraft.title);
+    polishedDraft.introduction = sanitizeField(polishedDraft.introduction);
+    polishedDraft.sections = polishedDraft.sections.map(section => ({
+      heading: sanitizeField(section.heading),
+      content: sanitizeField(section.content)
+    }));
+    polishedDraft.conclusion = sanitizeField(polishedDraft.conclusion);
 
     // Extract total token count from the SDK response
     const tokenCount = response.usageMetadata?.totalTokenCount || undefined;
