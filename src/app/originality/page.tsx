@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { getOrCreateUserId } from '@/lib/user';
 
 interface OriginalityReport {
   missing_angles: string[];
@@ -92,12 +93,13 @@ function OriginalityPageContent() {
     setReport(null);
 
     try {
+      const userId = getOrCreateUserId();
       const response = await fetch('/api/originality', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ input, websiteContext }),
+        body: JSON.stringify({ input, websiteContext, userId }),
       });
 
       if (!response.ok) {

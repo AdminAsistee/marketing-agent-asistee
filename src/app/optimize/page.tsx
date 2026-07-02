@@ -977,11 +977,11 @@ ${websiteContext || 'None provided'}
                     }));
 
                     return (
-                      <div className="card" style={{ margin: 0, padding: '24px' }}>
+                      <div className="card" style={{ margin: 0, padding: '20px 24px' }}>
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', borderBottom: '1px solid var(--card-border)', paddingBottom: '10px' }}>
                           Pipeline Progress
                         </h3>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                           {finalSteps.map((step, idx) => {
                             let circleColor = 'var(--card-border)';
                             let textColor = 'var(--gray-muted)';
@@ -1001,26 +1001,25 @@ ${websiteContext || 'None provided'}
 
                             return (
                               <React.Fragment key={idx}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '100px', position: 'relative' }}>
-                                  <div style={{
-                                    width: '32px',
-                                    height: '32px',
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                                  <span style={{
+                                    width: '20px',
+                                    height: '20px',
                                     borderRadius: '50%',
                                     background: circleColor,
                                     color: '#fff',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '0.85rem',
+                                    fontSize: '0.75rem',
                                     fontWeight: 'bold',
-                                    marginBottom: '8px',
                                     transition: 'all 0.3s ease',
-                                    boxShadow: isPulse ? '0 0 10px var(--primary)' : 'none',
+                                    boxShadow: isPulse ? '0 0 6px var(--primary)' : 'none',
                                     animation: isPulse ? 'pulse 1.5s infinite' : 'none'
                                   }}>
                                     {step.status === 'completed' ? '✓' : idx + 1}
-                                  </div>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: textColor, textAlign: 'center', transition: 'all 0.3s ease' }}>
+                                  </span>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: textColor, transition: 'all 0.3s ease' }}>
                                     {step.label}
                                   </span>
                                 </div>
@@ -1029,11 +1028,10 @@ ${websiteContext || 'None provided'}
                                     flex: '1',
                                     height: '2px',
                                     background: step.status === 'completed' ? 'var(--success)' : 'var(--card-border)',
-                                    margin: '0 10px',
-                                    minWidth: '20px',
+                                    margin: '0 8px',
+                                    minWidth: '15px',
                                     alignSelf: 'center',
-                                    transition: 'all 0.3s ease',
-                                    marginBottom: '20px'
+                                    transition: 'all 0.3s ease'
                                   }} />
                                 )}
                               </React.Fragment>
