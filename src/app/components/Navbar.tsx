@@ -11,11 +11,12 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
+    { name: '🏠 Home', path: '/' },
     { name: '📝 Generate Article', path: '/generate' },
+    { name: '⚙️ Optimize Content', path: '/optimize' },
     { name: '🔍 SEO Intelligence', path: '/seo' },
-    { name: '⚙️ Optimize Existing Article', path: '/optimize' },
     { name: '💡 Originality Analysis', path: '/originality' },
-    { name: '📋 Generation History', path: '/history' },
+    { name: '📋 History', path: '/history' },
   ];
 
   return (

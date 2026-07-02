@@ -13,6 +13,17 @@ No installation or local setup is required. Log in with your standard corporate 
 
 ---
 
+## 🗺️ Platform Structure
+
+The Editorial Engine contains the following workspace areas:
+- **Homepage:** Introduces the platform, key multi-agent collaboration principles, and provides quick navigation to all platform tools.
+- **Article Generation:** Write optimized drafts from outlines/PRDs with writing style constraints.
+- **SEO Intelligence:** Explore keyword interest spikes, rising terms, and strategic titles.
+- **Content Optimization:** Audit existing articles to discover and address content and keyword gaps.
+- **History:** Retrieve previous runs, check latencies, token counts, and review grading scorecards.
+
+---
+
 ## ✍️ Creating a New Article
 
 Use this feature when you want to write a brand new, fact-checked, and search-optimized article from a basic idea or Product Requirement Document (PRD).

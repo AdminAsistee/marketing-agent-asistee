@@ -12,6 +12,17 @@ Users can access the application through the web interface at:
 
 ---
 
+## Platform Structure
+
+The Editorial Engine is organized into five functional workspaces:
+* **Homepage (`/`):** Consolidates overview information and enables one-click routing to all features.
+* **Article Generation (`/generate`):** Formulates factuality-verified articles under custom brand styles.
+* **SEO Intelligence (`/seo`):** Explores trending keyword spikes and strategy templates.
+* **Content Optimization (`/optimize`):** Audits and corrects content gaps in pre-written drafts.
+* **History (`/history`):** Tracks agent logs, latencies, and token counts.
+
+---
+
 ## Key Features
 
 1. **AI Article Generation:** Automatically researches topics using Google Search grounding, compiles outlines, writes initial drafts, fact-checks assertions, and scores results against quality rubrics.

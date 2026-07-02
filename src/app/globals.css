@@ -14,7 +14,7 @@
   --warning-bg: rgba(245, 158, 11, 0.12);
   --info: #3b82f6;
   --info-bg: rgba(59, 130, 246, 0.12);
-  --gray-muted: #9ca3af;
+  --gray-muted: #cbd5e1; /* Increased contrast for readability in dark mode */
   --border-radius: 14px;
   --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono), Courier, monospace;
@@ -37,7 +37,7 @@
     --warning-bg: rgba(217, 119, 6, 0.1);
     --info: #2563eb;
     --info-bg: rgba(37, 99, 235, 0.1);
-    --gray-muted: #64748b;
+    --gray-muted: #475569; /* Increased contrast for readability in light mode */
   }
 }
 
