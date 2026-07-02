@@ -42,7 +42,7 @@ export default function Navbar() {
           backgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          Antigravity Content Suite
+          The Editorial Engine
         </strong>
       </div>
       <div style={{ display: 'flex', gap: '8px' }} className="nav-links">

@@ -1,6 +1,6 @@
-# AI Content Intelligence Platform
+# The Editorial Engine
 
-The **AI Content Intelligence Platform** is a production-grade, collaborative multi-agent content generation and search optimization engine. It uses real-time search grounding, automated factuality validation loops, tone styling adjustments, and search trends analysis to create and optimize high-quality content that meets professional journalistic standards.
+**The Editorial Engine** is a facts-grounded, multi-agent content platform built for quality, clarity, and strategic impact. Designed as a production-grade, collaborative multi-agent content generation and search optimization engine, it transforms research, SEO intelligence, and user requirements into high-quality, publication-ready content. It uses real-time search grounding, automated factuality validation loops, tone styling adjustments, and search trends analysis to create and optimize content that meets professional journalistic standards.
 
 ---
 

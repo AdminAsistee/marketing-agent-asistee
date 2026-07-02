@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Marketing Content Suite",
-  description: "Generate and optimize SEO-aligned, fact-checked content using multi-agent intelligence.",
+  title: "The Editorial Engine",
+  description: "A facts-grounded, multi-agent content platform built for quality, clarity, and strategic impact.",
 };
 
 export default function RootLayout({

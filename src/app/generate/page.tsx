@@ -157,8 +157,8 @@ ${parsed.recommendations.contentIdeas.map((idea: string) => `- ${idea}`).join('\
   return (
     <div className="container">
       <div className="header">
-        <h1 className="title-gradient">AI Marketing Content Agent</h1>
-        <p className="subtitle">Transform your Product Requirements (PRD) into high-quality, fact-checked blog articles.</p>
+        <h1 className="title-gradient">The Editorial Engine</h1>
+        <p className="subtitle">A facts-grounded, multi-agent content platform built for quality, clarity, and strategic impact.</p>
       </div>
 
       {loading ? (

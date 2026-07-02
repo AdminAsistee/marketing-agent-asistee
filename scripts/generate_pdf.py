@@ -43,7 +43,7 @@ class NumberedCanvas(canvas.Canvas):
         # 1. RUNNING HEADER
         self.setFont("Helvetica-Bold", 8)
         self.setFillColor(teal_primary)
-        self.drawString(54, 750, "AI CONTENT INTELLIGENCE PLATFORM")
+        self.drawString(54, 750, "THE EDITORIAL ENGINE")
         
         self.setFont("Helvetica", 8)
         self.setFillColor(dark_gray)
@@ -236,7 +236,7 @@ def create_pdf(filename="AI_Content_Intelligence_Platform_Walkthrough.pdf"):
     # COVER PAGE
     # =========================================================================
     story.append(Spacer(1, 150))
-    story.append(Paragraph("AI Content Intelligence Platform", title_style))
+    story.append(Paragraph("The Editorial Engine", title_style))
     story.append(Paragraph("User Guide and Technical Walkthrough", subtitle_style))
     story.append(Spacer(1, 120))
     
@@ -251,7 +251,7 @@ def create_pdf(filename="AI_Content_Intelligence_Platform_Walkthrough.pdf"):
     # =========================================================================
     story.append(Paragraph("Section 1: Overview", h1_style))
     story.append(Paragraph(
-        "The <b>AI Content Intelligence Platform</b> solves a critical challenge for modern content creators, marketers, "
+        "<b>The Editorial Engine</b> solves a critical challenge for modern content creators, marketers, "
         "and SEO specialists: <b>creating high-quality, fact-checked, and search-optimized content efficiently.</b>",
         body_style
     ))
@@ -592,7 +592,7 @@ def create_pdf(filename="AI_Content_Intelligence_Platform_Walkthrough.pdf"):
     # =========================================================================
     story.append(Paragraph("Section 8: Future Improvements", h1_style))
     story.append(Paragraph(
-        "The AI Content Intelligence Platform is designed with modularity to easily integrate future capabilities:",
+        "The Editorial Engine is designed with modularity to easily integrate future capabilities:",
         body_style
     ))
     story.append(bullet("<b>Google Search Console Integration:</b> Fetch real impression and click data directly to target and refine content gaps automatically."))

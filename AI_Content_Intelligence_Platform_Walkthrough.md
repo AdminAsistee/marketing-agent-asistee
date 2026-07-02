@@ -1,4 +1,4 @@
-# AI Content Intelligence Platform
+# The Editorial Engine
 ## User Guide and Technical Walkthrough
 
 - **Project Purpose:** Live trend-driven, fact-checked AI content generation and optimization suite utilizing collaborative Gemini agents and Supabase telemetry logging.
@@ -9,7 +9,7 @@
 
 ## Section 1: Overview
 
-The **AI Content Intelligence Platform** solves a critical challenge for modern content creators, marketers, and SEO specialists: **creating high-quality, fact-checked, and search-optimized content efficiently.** 
+The **The Editorial Engine** solves a critical challenge for modern content creators, marketers, and SEO specialists: **creating high-quality, fact-checked, and search-optimized content efficiently.** 
 
 Many automated writing systems generate generic, unverified articles that fail to rank on search engines or provide genuine value to readers. This platform addresses these shortcomings by employing a collaborative network of specialized AI agents. The agents research topics using real-time search grounding, analyze live Google Trends data, cross-examine claims to prevent hallucination, polish style, and grade drafts against custom quality rubrics.
 

@@ -1,6 +1,6 @@
-# AI Content Intelligence Platform User Guide
+# The Editorial Engine User Guide
 
-Welcome to the **AI Content Intelligence Platform** user guide. This platform is a collaborative content creation and SEO optimization workspace. It helps content creators, copywriters, and marketers research topics, write drafts, verify factual accuracy, and optimize existing articles to rank on search engines.
+Welcome to **The Editorial Engine** user guide. **The Editorial Engine** is a facts-grounded, multi-agent content platform built for quality, clarity, and strategic impact, designed to transform research, SEO intelligence, and user requirements into high-quality, publication-ready content. It helps content creators, copywriters, and marketers research topics, write drafts, verify factual accuracy, and optimize existing articles to rank on search engines.
 
 ---
 
